@@ -2,7 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:gravity="fill_vertical">
 
     <TextView
         android:id="@+id/dialog_header"
@@ -11,6 +12,11 @@
         android:text="@string/dialog_message_header"
         android:textAlignment="center"
         android:textAppearance="@android:style/TextAppearance.Material.DialogWindowTitle" />
+
+    <TextView
+        android:id="@+id/dialog_current_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
     <EditText
         android:id="@+id/dialog_message"

@@ -18,6 +18,7 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -62,7 +63,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener {
 
-    private static final String TAG = MainActivity.class.getSimpleName();
+    private static final String TAG = "Proximity";
 
     private static final int TTL_IN_SECONDS = 2 * 60; // Two minutes.
 
@@ -90,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
      * The {@link Message} object used to broadcast information about the device to nearby devices.
      */
     private Message mPubMessage;
+    private String currentPubMessage;
 
     /**
      * A {@link MessageListener} for processing messages from nearby devices.
@@ -190,12 +192,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             @Override
             public void onClick(DialogInterface dialog, int id) {
                 mMessageText   = (EditText) dialog_view.findViewById(R.id.dialog_message);
-                mPubMessage = new Message(mMessageText.getText().toString().getBytes());
+                currentPubMessage = mMessageText.getText().toString();
+                mMessageText.setText("");
+                mPubMessage = new Message(currentPubMessage.getBytes());
 
                 Toast.makeText(getApplicationContext(), "Sent message", Toast.LENGTH_LONG).show();
             }
         });
         builder.setNegativeButton(R.string.dialog_message_cancel, null);
+
         mMessageDialog = builder.create();
     }
 
@@ -207,10 +212,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return true;
     }
 
+    // shows the Current Message dialog
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int res_id = item.getItemId();
         if (res_id == R.id.action_message) {
+            if (currentPubMessage != null) {
+                TextView currDisplay = mMessageDialog.findViewById(R.id.dialog_current_message);
+                currDisplay.setText(currentPubMessage);
+            }
+            else {
+                Log.i(TAG, "no message yet");
+            }
             mMessageDialog.show();
         }
         return true;
@@ -321,6 +334,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     }
                 }).build();
 
+        if (mPubMessage == null) {
+            Log.i(TAG, "message was null");
+            currentPubMessage = "No message is being published yet";
+            mPubMessage = new Message(currentPubMessage.getBytes());
+        }
+        else {
+        }
         Nearby.Messages.publish(mGoogleApiClient, mPubMessage, options)
                 .setResultCallback(new ResultCallback<Status>() {
                     @Override
@@ -328,6 +348,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         if (status.isSuccess()) {
                             Log.i(TAG, "Published successfully.");
                         } else {
+                            Log.i(TAG, status.getStatus().toString());
+                            Log.i(TAG, status.getStatusMessage());
+                            Log.i(TAG, status.getStatusCode() + "");
                             mPublishSwitch.setChecked(false);
                         }
                     }
