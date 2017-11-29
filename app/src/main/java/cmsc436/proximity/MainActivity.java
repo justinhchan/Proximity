@@ -16,6 +16,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -36,6 +37,15 @@ import com.google.android.gms.nearby.messages.Strategy;
 import com.google.android.gms.nearby.messages.SubscribeCallback;
 import com.google.android.gms.nearby.messages.SubscribeOptions;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -86,12 +96,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private SwitchCompat mSubscribeSwitch;
     private AlertDialog mMessageDialog;
     private EditText mMessageText;
+    private TextView currPubMessageDisplay;
+    // TODO temporary until listview & received message data class is done
+    private TextView receivedMessagesView;
 
     /**
      * The {@link Message} object used to broadcast information about the device to nearby devices.
      */
     private Message mPubMessage;
-    private String currentPubMessage;
+    private String currentPubMessageString;
+    // TODO create class for received messages with attributes time/date, etc
+    private List<String> receivedMessages;
 
     /**
      * A {@link MessageListener} for processing messages from nearby devices.
@@ -103,10 +118,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
      */
     private ArrayAdapter<String> mNearbyDevicesArrayAdapter;
 
+    // internal storage
+    private String currMessageStorageFileName = "currMessageFile";
+    private String allMessagesStroageFileName = "allMessagesFile";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        receivedMessagesView = findViewById(R.id.received_messages_view);
+        if (receivedMessagesView == null)
+            Log.i(TAG, "receivedmessagesview is null");
 
         mToolbar = (Toolbar)findViewById(R.id.action_bar);
         setSupportActionBar(mToolbar);
@@ -165,6 +188,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         });
 
+        Button fakeMsgBtn = findViewById(R.id.fakemsgbtn);
+        fakeMsgBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Log.i(TAG, "fake msg");
+                receiveFakeMessage();
+            }
+        });
+
         final List<String> nearbyDevicesArrayList = new ArrayList<>();
         mNearbyDevicesArrayAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1,
@@ -175,6 +207,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             nearbyDevicesListView.setAdapter(mNearbyDevicesArrayAdapter);
         }
         buildGoogleApiClient();
+
+        receivedMessages = new ArrayList<String>();
+        readFromStorage();
     }
 
     private void createMessageDialog() {
@@ -192,16 +227,21 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             @Override
             public void onClick(DialogInterface dialog, int id) {
                 mMessageText   = (EditText) dialog_view.findViewById(R.id.dialog_message);
-                currentPubMessage = mMessageText.getText().toString();
+                currentPubMessageString = mMessageText.getText().toString();
+                saveCurrentPubMessage();
                 mMessageText.setText("");
-                mPubMessage = new Message(currentPubMessage.getBytes());
+                mPubMessage = new Message(currentPubMessageString.getBytes());
 
                 Toast.makeText(getApplicationContext(), "Sent message", Toast.LENGTH_LONG).show();
             }
         });
         builder.setNegativeButton(R.string.dialog_message_cancel, null);
 
+
+
         mMessageDialog = builder.create();
+
+        currPubMessageDisplay = dialog_view.findViewById(R.id.dialog_current_message);
     }
 
     @Override
@@ -217,16 +257,123 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public boolean onOptionsItemSelected(MenuItem item) {
         int res_id = item.getItemId();
         if (res_id == R.id.action_message) {
-            if (currentPubMessage != null) {
-                TextView currDisplay = mMessageDialog.findViewById(R.id.dialog_current_message);
-                currDisplay.setText(currentPubMessage);
+
+            if (currentPubMessageString != null && currPubMessageDisplay != null) {
+                currPubMessageDisplay.setText(currentPubMessageString);
             }
             else {
                 Log.i(TAG, "no message yet");
             }
+
             mMessageDialog.show();
         }
         return true;
+    }
+
+    // read from storage to get a current message being published and the list of all received msgs
+    private void readFromStorage() {
+        // check if curr msg file already exists & if not create it
+        if (!getFileStreamPath(currMessageStorageFileName).exists()) {
+            try {
+                getFileStreamPath(currMessageStorageFileName).createNewFile();
+            } catch (IOException e) {
+                Log.i(TAG, "IO exception creating curr msg file");
+                e.printStackTrace();
+            }
+        }
+        // read curr msg file
+        try {
+            FileInputStream fis = openFileInput(currMessageStorageFileName);
+            BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+
+            String line;
+            String sep = System.getProperty("line.separator");
+
+            while (null != (line = br.readLine())) {
+                currentPubMessageString = line;
+            }
+
+            br.close();
+
+        } catch (IOException e) {
+            Log.i(TAG, "IOException");
+        }
+
+        //TODO for now fake received messages are added anytime the file is opened here instead of when received
+        // check if received msgs file already exists & if not create it
+        if (!getFileStreamPath(allMessagesStroageFileName).exists()) {
+            // read received msgs file
+            try {
+                FileInputStream fis = openFileInput(allMessagesStroageFileName);
+                BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+
+                String line;
+                String sep = System.getProperty("line.separator");
+
+                while (null != (line = br.readLine())) {
+                    receivedMessages.add(line);
+                    receivedMessagesView.append(line);
+                }
+
+                br.close();
+
+            } catch (IOException e) {
+                Log.i(TAG, "IOException");
+            }
+        }
+    }
+
+    private void receiveFakeMessage() {
+        //TODO for now fake received messages are added anytime the file is opened here instead of when received
+        // check if received msgs file already exists & if not create it
+        if (!getFileStreamPath(allMessagesStroageFileName).exists()) {
+            try {
+                getFileStreamPath(allMessagesStroageFileName).createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+        try {
+            FileOutputStream fos = openFileOutput(allMessagesStroageFileName, MODE_APPEND);
+
+            PrintWriter pw = new PrintWriter(new BufferedWriter(
+                    new OutputStreamWriter(fos)));
+
+            String newmsg = "fake received message!!! time " + System.currentTimeMillis() + "\n";
+            Log.i(TAG, "new msg " + newmsg);
+            receivedMessages.add(newmsg);
+            receivedMessagesView.append(newmsg);
+            pw.println(newmsg);
+
+            pw.close();
+        } catch (FileNotFoundException e) {
+            Log.i(TAG, "received messages file not found");
+        }
+    }
+
+    private void saveCurrentPubMessage() {
+        // check if curr msg file already exists & if not create it, write new str to file
+        if (!getFileStreamPath(currMessageStorageFileName).exists()) {
+            try {
+                getFileStreamPath(currMessageStorageFileName).createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            FileOutputStream fos = openFileOutput(currMessageStorageFileName, MODE_PRIVATE);
+
+            PrintWriter pw = new PrintWriter(new BufferedWriter(
+                    new OutputStreamWriter(fos)));
+
+            pw.println(currentPubMessageString);
+
+            pw.close();
+        } catch (IOException e) {
+            Log.i(TAG, "IO exception writing to curr msg file");
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -336,8 +483,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         if (mPubMessage == null) {
             Log.i(TAG, "message was null");
-            currentPubMessage = "No message is being published yet";
-            mPubMessage = new Message(currentPubMessage.getBytes());
+            currentPubMessageString = "No message is being published yet";
+            mPubMessage = new Message(currentPubMessageString.getBytes());
         }
         else {
         }
