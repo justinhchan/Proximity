@@ -503,7 +503,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         if (currentPubMessage == null) {
             Log.i(TAG, "message was null");
-            currentPubMessageString = "No message is being published yet";
+            //currentPubMessageString = "No message is being published yet";
             currentPubMessage = new Message(currentPubMessageString.getBytes());
         }
         else {
