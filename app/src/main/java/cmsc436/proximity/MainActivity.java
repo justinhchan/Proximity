@@ -136,8 +136,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             @Override
             public void onFound(final Message message) {
                 // Called when a new message is found.
-                receiveMessage(message.getContent().toString());
-                Log.i(TAG, "received message " + message.getContent().toString());
+                receiveMessage(new String(message.getContent()));
+                Log.i(TAG, "received message " + new String(message.getContent()));
                 Toast.makeText(getApplicationContext(), "Found message", Toast.LENGTH_SHORT).show();
             }
 
@@ -185,7 +185,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         fakeMsgBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.i(TAG, "fake msg");
                 receiveFakeMessage();
             }
         });
@@ -345,9 +344,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     // TODO this is for testing purposes
     private void receiveFakeMessage() {
 
-
-        mMessageListener.onFound(new Message("test receiving message".getBytes()));
-//        receiveMessage("fake message for testing purposes" + System.currentTimeMillis());
+        mMessageListener.onFound(new Message(("simulated message sent at " + System.currentTimeMillis()).getBytes()));
     }
 
     // when the currently broadcasting message is changed, save it to internal storage
