@@ -10,7 +10,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         <meta-data
-            android:name="com.google.android.nearby.messages.AIzaSyDabrwU6jqTtJ-eUKtH3QkTzoWj1_LS3O4"
+            android:name="com.google.android.nearby.messages.API_KEY"
             android:value="AIzaSyCnfEwwp-eiXxKKL4KdX8JzP9dnQKqxvF4" />
         <activity android:name=".MainActivity">
             <intent-filter>
