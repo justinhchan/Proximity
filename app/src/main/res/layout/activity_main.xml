@@ -26,6 +26,13 @@
         android:paddingHorizontal="10dp"
         android:text="@string/share_message" />
 
+
+    <Button
+        android:id="@+id/fakemsgbtn"
+        android:text="Receive Fake Message for testing purposes"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
     <ListView
         android:id="@+id/nearby_devices_list_view"
         android:layout_width="match_parent"
