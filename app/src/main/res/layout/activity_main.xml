@@ -16,15 +16,21 @@
         android:id="@+id/subscribe_switch"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="10dp"
-        android:text="@string/discover_nearby_devices" />
+        android:padding="18dp"
+        android:textColor="#008F36"
+        android:text="@string/discover_nearby_devices"
+        android:textSize="18sp"
+        android:textStyle="bold|italic" />
 
     <android.support.v7.widget.SwitchCompat
         android:id="@+id/publish_switch"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="10dp"
-        android:text="@string/share_message" />
+        android:padding="18dp"
+        android:text="@string/share_message"
+        android:textColor="#008F36"
+        android:textSize="18sp"
+        android:textStyle="bold|italic" />
 
 
     <Button
