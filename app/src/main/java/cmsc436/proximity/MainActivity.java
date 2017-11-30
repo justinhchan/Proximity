@@ -97,16 +97,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private AlertDialog mMessageDialog;
     private EditText mMessageText;
     private TextView currPubMessageDisplay;
-    // TODO temporary until listview & received message data class is done
-    private TextView receivedMessagesView;
 
     /**
      * The {@link Message} object used to broadcast information about the device to nearby devices.
      */
-    private Message mPubMessage;
+    private Message currentPubMessage;
     private String currentPubMessageString;
-    // TODO create class for received messages with attributes time/date, etc
-    private List<String> receivedMessages;
 
     /**
      * A {@link MessageListener} for processing messages from nearby devices.
@@ -120,16 +116,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     // internal storage
     private String currMessageStorageFileName = "currMessageFile";
-    private String allMessagesStroageFileName = "allMessagesFile";
+    private String receivedMessagesStorageFileName = "allMessagesFile";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        receivedMessagesView = findViewById(R.id.received_messages_view);
-        if (receivedMessagesView == null)
-            Log.i(TAG, "receivedmessagesview is null");
 
         mToolbar = (Toolbar)findViewById(R.id.action_bar);
         setSupportActionBar(mToolbar);
@@ -144,7 +136,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             @Override
             public void onFound(final Message message) {
                 // Called when a new message is found.
-                mNearbyDevicesArrayAdapter.add( "user");
+                receiveMessage(message.getContent().toString());
+                Log.i(TAG, "received message " + message.getContent().toString());
                 Toast.makeText(getApplicationContext(), "Found message", Toast.LENGTH_SHORT).show();
             }
 
@@ -208,7 +201,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
         buildGoogleApiClient();
 
-        receivedMessages = new ArrayList<String>();
         readFromStorage();
     }
 
@@ -230,7 +222,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 currentPubMessageString = mMessageText.getText().toString();
                 saveCurrentPubMessage();
                 mMessageText.setText("");
-                mPubMessage = new Message(currentPubMessageString.getBytes());
+                currentPubMessage = new Message(currentPubMessageString.getBytes());
 
                 Toast.makeText(getApplicationContext(), "Sent message", Toast.LENGTH_LONG).show();
             }
@@ -271,6 +263,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     // read from storage to get a current message being published and the list of all received msgs
+    // so they can be displayed
     private void readFromStorage() {
         // check if curr msg file already exists & if not create it
         if (!getFileStreamPath(currMessageStorageFileName).exists()) {
@@ -301,18 +294,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         //TODO for now fake received messages are added anytime the file is opened here instead of when received
         // check if received msgs file already exists & if not create it
-        if (!getFileStreamPath(allMessagesStroageFileName).exists()) {
+        if (!getFileStreamPath(receivedMessagesStorageFileName).exists()) {
             // read received msgs file
             try {
-                FileInputStream fis = openFileInput(allMessagesStroageFileName);
+                FileInputStream fis = openFileInput(receivedMessagesStorageFileName);
                 BufferedReader br = new BufferedReader(new InputStreamReader(fis));
 
                 String line;
                 String sep = System.getProperty("line.separator");
 
                 while (null != (line = br.readLine())) {
-                    receivedMessages.add(line);
-                    receivedMessagesView.append(line);
+                    mNearbyDevicesArrayAdapter.add(line);
                 }
 
                 br.close();
@@ -323,27 +315,26 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    private void receiveFakeMessage() {
-        //TODO for now fake received messages are added anytime the file is opened here instead of when received
+    private void receiveMessage(String newmsg) {
+        mNearbyDevicesArrayAdapter.add( newmsg.toString());
+
+        //save to internal storage (TODO maybe this should only be done in onPause or onStop)
         // check if received msgs file already exists & if not create it
-        if (!getFileStreamPath(allMessagesStroageFileName).exists()) {
+        if (!getFileStreamPath(receivedMessagesStorageFileName).exists()) {
             try {
-                getFileStreamPath(allMessagesStroageFileName).createNewFile();
+                getFileStreamPath(receivedMessagesStorageFileName).createNewFile();
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
         }
         try {
-            FileOutputStream fos = openFileOutput(allMessagesStroageFileName, MODE_APPEND);
+            FileOutputStream fos = openFileOutput(receivedMessagesStorageFileName, MODE_APPEND);
 
             PrintWriter pw = new PrintWriter(new BufferedWriter(
                     new OutputStreamWriter(fos)));
 
-            String newmsg = "fake received message!!! time " + System.currentTimeMillis() + "\n";
             Log.i(TAG, "new msg " + newmsg);
-            receivedMessages.add(newmsg);
-            receivedMessagesView.append(newmsg);
             pw.println(newmsg);
 
             pw.close();
@@ -351,7 +342,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             Log.i(TAG, "received messages file not found");
         }
     }
+    // TODO this is for testing purposes
+    private void receiveFakeMessage() {
 
+
+        mMessageListener.onFound(new Message("test receiving message".getBytes()));
+//        receiveMessage("fake message for testing purposes" + System.currentTimeMillis());
+    }
+
+    // when the currently broadcasting message is changed, save it to internal storage
     private void saveCurrentPubMessage() {
         // check if curr msg file already exists & if not create it, write new str to file
         if (!getFileStreamPath(currMessageStorageFileName).exists()) {
@@ -481,14 +480,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     }
                 }).build();
 
-        if (mPubMessage == null) {
+        if (currentPubMessage == null) {
             Log.i(TAG, "message was null");
             currentPubMessageString = "No message is being published yet";
-            mPubMessage = new Message(currentPubMessageString.getBytes());
+            currentPubMessage = new Message(currentPubMessageString.getBytes());
         }
         else {
         }
-        Nearby.Messages.publish(mGoogleApiClient, mPubMessage, options)
+        Nearby.Messages.publish(mGoogleApiClient, currentPubMessage, options)
                 .setResultCallback(new ResultCallback<Status>() {
                     @Override
                     public void onResult(@NonNull Status status) {
@@ -517,7 +516,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
      */
     private void unpublish() {
         Log.i(TAG, "Unpublishing.");
-        Nearby.Messages.unpublish(mGoogleApiClient, mPubMessage);
+        Nearby.Messages.unpublish(mGoogleApiClient, currentPubMessage);
     }
 
 }

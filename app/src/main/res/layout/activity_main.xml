@@ -29,15 +29,8 @@
 
     <Button
         android:id="@+id/fakemsgbtn"
-        android:text="Receive Fake Message"
+        android:text="Receive Fake Message for testing purposes"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-
-
-    <!-- TODO temporary until listview and stuff is created -->
-    <TextView
-        android:id="@+id/received_messages_view"
-        android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
     <ListView
