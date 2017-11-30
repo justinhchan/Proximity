@@ -81,8 +81,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
      * Sets the time in seconds for a published message or a subscription to live. Set to two
      * minutes.
      */
+    // i added the "earshot" part not sure what it does yet, maybe restricts to ultrasound
     private static final Strategy PUB_SUB_STRATEGY = new Strategy.Builder()
-            .setTtlSeconds(TTL_IN_SECONDS).build();
+            .setTtlSeconds(TTL_IN_SECONDS).setDistanceType(Strategy.DISTANCE_TYPE_EARSHOT).build();
+
 
 
     /**
@@ -261,6 +263,19 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return true;
     }
 
+
+
+    private void receiveMessage(String newmsg) {
+        mNearbyDevicesArrayAdapter.add( newmsg.toString());
+
+    }
+
+    // TODO this is for testing purposes
+    private void receiveFakeMessage() {
+
+        mMessageListener.onFound(new Message(("simulated message sent at " + System.currentTimeMillis()).getBytes()));
+    }
+
     // read from storage to get a current message being published and the list of all received msgs
     // so they can be displayed
     private void readFromStorage() {
@@ -314,10 +329,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    private void receiveMessage(String newmsg) {
-        mNearbyDevicesArrayAdapter.add( newmsg.toString());
+    // store all received messages in internal storage
+    private void storeReceivedMessages() {
 
-        //save to internal storage (TODO maybe this should only be done in onPause or onStop)
         // check if received msgs file already exists & if not create it
         if (!getFileStreamPath(receivedMessagesStorageFileName).exists()) {
             try {
@@ -333,18 +347,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             PrintWriter pw = new PrintWriter(new BufferedWriter(
                     new OutputStreamWriter(fos)));
 
-            Log.i(TAG, "new msg " + newmsg);
-            pw.println(newmsg);
+            for (int i=0; i<mNearbyDevicesArrayAdapter.getCount(); i++) {
+                pw.println(mNearbyDevicesArrayAdapter.getItem(i));
+            }
 
             pw.close();
         } catch (FileNotFoundException e) {
             Log.i(TAG, "received messages file not found");
         }
-    }
-    // TODO this is for testing purposes
-    private void receiveFakeMessage() {
-
-        mMessageListener.onFound(new Message(("simulated message sent at " + System.currentTimeMillis()).getBytes()));
     }
 
     // when the currently broadcasting message is changed, save it to internal storage
@@ -417,6 +427,20 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if (mSubscribeSwitch.isChecked()) {
             subscribe();
         }
+    }
+
+    @Override
+    protected void onStop() {
+        Log.i(TAG, "onStop()");
+        super.onStop();
+        storeReceivedMessages();
+        saveCurrentPubMessage();
+
+        if (mPublishSwitch.isChecked())
+            unpublish();
+
+        if (mSubscribeSwitch.isChecked())
+            unsubscribe();
     }
 
     /**
