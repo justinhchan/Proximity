@@ -17,10 +17,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="18dp"
-        android:textColor="#008F36"
+        android:textColor="#1C7C72"
         android:text="@string/discover_nearby_devices"
         android:checked="true"
-        android:textSize="18sp"
+        android:textSize="19sp"
         android:textStyle="bold|italic"
         />
 
@@ -31,8 +31,8 @@
         android:padding="18dp"
         android:text="@string/share_message"
         android:checked="true"
-        android:textColor="#008F36"
-        android:textSize="18sp"
+        android:textColor="#1C7C72"
+        android:textSize="19sp"
         android:textStyle="bold|italic" />
 
 
