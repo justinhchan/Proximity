@@ -21,7 +21,8 @@
         android:text="@string/discover_nearby_devices"
         android:checked="true"
         android:textSize="18sp"
-        android:textStyle="bold|italic" />
+        android:textStyle="bold|italic"
+        />
 
     <android.support.v7.widget.SwitchCompat
         android:id="@+id/publish_switch"

@@ -14,6 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/dialog_message_header"
+        android:padding="20dp"
         android:textAlignment="center"
         android:textAppearance="@android:style/TextAppearance.Material.DialogWindowTitle" />
 

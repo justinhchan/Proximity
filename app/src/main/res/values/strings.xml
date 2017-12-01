@@ -7,7 +7,7 @@
     <string name="message_action">Compose Message</string>
 
     <string name="dialog_message_header">Current Message</string>
-    <string name="dialog_message_save">Save</string>
+    <string name="dialog_message_save">Submit</string>
     <string name="dialog_message_cancel">Cancel</string>
 
     <!-- TODO: Remove or change this placeholder text -->
