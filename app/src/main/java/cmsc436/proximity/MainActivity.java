@@ -124,6 +124,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private Message thisPlayerNameMessage;
     private List<String> otherPlayers;
     private AlertDialog namePromptDialog;
+    private Boolean isGameRunner;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -137,6 +138,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //        mPublishSwitch = (SwitchCompat) findViewById(R.id.publish_switch);
 
         otherPlayers = new ArrayList<String>();
+        isGameRunner = false;
 //        createMessageDialog();
 
         mMessageListener = new MessageListener() {
@@ -302,7 +304,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Toast.makeText(getApplicationContext(), "subscribed for 30 secs", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(getApplicationContext(), "subscribed for 15 secs", Toast.LENGTH_SHORT).show();
+                                pickGameRunner();
                             }
                         });
                     }
@@ -319,6 +322,25 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         }
                     }
                 });
+    }
+
+    // pick a device to run the game by choosing the alphabeticallly first user
+    private void pickGameRunner() {
+        String alphaFirstUser = thisPlayerName;
+        for (String user : otherPlayers) {
+            if (alphaFirstUser.compareTo(user) > 0) {
+                alphaFirstUser = user;
+            }
+        }
+
+        if (alphaFirstUser.compareTo(thisPlayerName) == 0) {
+            //this device is the game runner
+            isGameRunner = true;
+
+            //todo (to make the protocol more consistent) tell all the other devices that we are the game runner and resolve conflicts
+        }
+
+        // then we start a round of the game (2b in the tasks doc)
     }
 
 //    private void createMessageDialog() {
