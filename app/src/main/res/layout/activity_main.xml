@@ -12,6 +12,12 @@
         android:id="@+id/action_bar">
     </include>
 
+    <Button
+        android:id="@+id/startgamebtn"
+        android:text="Start Guess Who Game"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
     <android.support.v7.widget.SwitchCompat
         android:id="@+id/subscribe_switch"
         android:layout_width="match_parent"

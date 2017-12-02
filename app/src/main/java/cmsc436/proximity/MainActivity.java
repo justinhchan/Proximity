@@ -75,15 +75,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     private static final String TAG = "Proximity";
 
-    private static final int TTL_IN_SECONDS = 2 * 60; // Two minutes.
+    private static final int TTL_IN_SECONDS = 15; // 15 seconds
 
     /**
      * Sets the time in seconds for a published message or a subscription to live. Set to two
      * minutes.
      */
-    // i added the "earshot" part not sure what it does yet, maybe restricts to ultrasound
     private static final Strategy PUB_SUB_STRATEGY = new Strategy.Builder()
-            .setTtlSeconds(TTL_IN_SECONDS).setDistanceType(Strategy.DISTANCE_TYPE_EARSHOT).build();
+            .setTtlSeconds(TTL_IN_SECONDS).build();
 
 
 
@@ -94,17 +93,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     // Views.
     private Toolbar mToolbar;
-    private SwitchCompat mPublishSwitch;
-    private SwitchCompat mSubscribeSwitch;
-    private AlertDialog mMessageDialog;
-    private EditText mMessageText;
-    private TextView currPubMessageDisplay;
+//    private SwitchCompat mPublishSwitch;
+//    private SwitchCompat mSubscribeSwitch;
+//    private AlertDialog mMessageDialog;
+//    private EditText mMessageText;
+//    private TextView currPubMessageDisplay;
 
     /**
      * The {@link Message} object used to broadcast information about the device to nearby devices.
      */
-    private Message currentPubMessage;
-    private String currentPubMessageString;
+//    private Message currentPubMessage;
+//    private String currentPubMessageString;
 
     /**
      * A {@link MessageListener} for processing messages from nearby devices.
@@ -117,8 +116,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private ArrayAdapter<String> mNearbyDevicesArrayAdapter;
 
     // internal storage
-    private String currMessageStorageFileName = "currMessageFile";
-    private String receivedMessagesStorageFileName = "allMessagesFile";
+//    private String currMessageStorageFileName = "currMessageFile";
+//    private String receivedMessagesStorageFileName = "allMessagesFile";
+
+    //variables for guess who game
+    private String thisPlayerName;
+    private Message thisPlayerNameMessage;
+    private List<String> otherPlayers;
+    private AlertDialog namePromptDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -128,19 +133,23 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mToolbar = (Toolbar)findViewById(R.id.action_bar);
         setSupportActionBar(mToolbar);
 
-        mSubscribeSwitch = (SwitchCompat) findViewById(R.id.subscribe_switch);
-        mPublishSwitch = (SwitchCompat) findViewById(R.id.publish_switch);
+//        mSubscribeSwitch = (SwitchCompat) findViewById(R.id.subscribe_switch);
+//        mPublishSwitch = (SwitchCompat) findViewById(R.id.publish_switch);
 
-
-        createMessageDialog();
+        otherPlayers = new ArrayList<String>();
+//        createMessageDialog();
 
         mMessageListener = new MessageListener() {
             @Override
             public void onFound(final Message message) {
                 // Called when a new message is found.
-                receiveMessage(new String(message.getContent()));
+                String messageContent = new String(message.getContent());
+                if (messageContent.startsWith("myname: ")) {
+                    String otherPlayerName = messageContent.split(" ")[1];
+                    otherPlayers.add(otherPlayerName);
+                    Toast.makeText(getApplicationContext(), "Found " + otherPlayerName, Toast.LENGTH_SHORT).show();
+                }
                 Log.i(TAG, "received message " + new String(message.getContent()));
-                Toast.makeText(getApplicationContext(), "Found message", Toast.LENGTH_SHORT).show();
             }
 
             @Override
@@ -151,36 +160,42 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         };
 
-        mSubscribeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // If GoogleApiClient is connected, perform sub actions in response to user action.
-                // If it isn't connected, do nothing, and perform sub actions when it connects (see
-                // onConnected()).
-                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
-                    if (isChecked) {
-                        subscribe();
-                    } else {
-                        unsubscribe();
-                    }
-                }
-            }
-        });
+//        mSubscribeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+//            @Override
+//            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+//                // If GoogleApiClient is connected, perform sub actions in response to user action.
+//                // If it isn't connected, do nothing, and perform sub actions when it connects (see
+//                // onConnected()).
+//                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
+//                    if (isChecked) {
+//                        subscribe();
+//                    } else {
+//                        unsubscribe();
+//                    }
+//                }
+//            }
+//        });
 
-        mPublishSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+//        mPublishSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+//            @Override
+//            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+//                // If GoogleApiClient is connected, perform pub actions in response to user action.
+//                // If it isn't connected, do nothing, and perform pub actions when it connects (see
+//                // onConnected()).
+//                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
+//                    if (isChecked) {
+//                        publish();
+//                    } else {
+//                        unpublish();
+//                    }
+//                }
+//            }
+//        });
+
+        Button startGameBtn = findViewById(R.id.startgamebtn);
+        startGameBtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // If GoogleApiClient is connected, perform pub actions in response to user action.
-                // If it isn't connected, do nothing, and perform pub actions when it connects (see
-                // onConnected()).
-                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
-                    if (isChecked) {
-                        publish();
-                    } else {
-                        unpublish();
-                    }
-                }
-            }
+            public void onClick(View view) { startGame(); }
         });
 
         Button fakeMsgBtn = findViewById(R.id.fakemsgbtn);
@@ -202,11 +217,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
         buildGoogleApiClient();
 
-        readFromStorage();
+//        readFromStorage();
     }
 
-    private void createMessageDialog() {
+    // open a prompt asking for user's name
+    // start publishing the user's name to nearby devices
+    // start subscribing for other players' names from nearby devices
+    // after 30 seconds stop subscribing and publishing
+    private void startGame() {
+        openNamePrompt();
+    }
 
+    private void openNamePrompt() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
 
         // Get the layout inflater
@@ -214,173 +236,267 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         // Inflate and set the layout for the dialog
         // Pass null as the parent view because its going in the dialog layout
-        final View dialog_view = inflater.inflate(R.layout.dialog_message, null);
+        final View dialog_view = inflater.inflate(R.layout.nameprompt, null);
         builder.setView(dialog_view);
-        builder.setPositiveButton(R.string.dialog_message_save, new DialogInterface.OnClickListener() {
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int id) {
-                mMessageText   = (EditText) dialog_view.findViewById(R.id.dialog_message);
-                currentPubMessageString = mMessageText.getText().toString();
-                saveCurrentPubMessage();
-                mMessageText.setText("");
-                currentPubMessage = new Message(currentPubMessageString.getBytes());
+                EditText nameEntry   = (EditText) dialog_view.findViewById(R.id.dialog_name);
+                thisPlayerName = nameEntry.getText().toString();
+                nameEntry.setText("");
 
-                Toast.makeText(getApplicationContext(), "Sent message", Toast.LENGTH_LONG).show();
+                startPublishingName();
+                startFindingOtherPlayers();
             }
         });
-        builder.setNegativeButton(R.string.dialog_message_cancel, null);
 
-
-
-        mMessageDialog = builder.create();
-
-        currPubMessageDisplay = dialog_view.findViewById(R.id.dialog_current_message);
+        namePromptDialog = builder.create();
+        namePromptDialog.show();
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater menuInflater = getMenuInflater();
-        menuInflater.inflate(R.menu.menu, menu);
+    // publish this player's name to nearby devices for 30 secs
+    private void startPublishingName() {
+            Log.i(TAG, "Publishing");
+            PublishOptions options = new PublishOptions.Builder()
+                    .setStrategy(PUB_SUB_STRATEGY)
+                    .setCallback(new PublishCallback() {
+                        @Override
+                        public void onExpired() {
+                            super.onExpired();
+                            Log.i(TAG, "No longer publishing");
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(getApplicationContext(), "published name", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+                    }).build();
 
-        return true;
-    }
-
-    // shows the Current Message dialog
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int res_id = item.getItemId();
-        if (res_id == R.id.action_message) {
-
-            if (currentPubMessageString != null && currPubMessageDisplay != null) {
-                currPubMessageDisplay.setText(currentPubMessageString);
-            }
-            else {
-                Log.i(TAG, "no message yet");
-            }
-
-            mMessageDialog.show();
+            // publish a message "myname: <name>". other devices will extract the name from the message and add to their list
+            thisPlayerNameMessage = new Message(("myname: " + thisPlayerName).getBytes());
+            Nearby.Messages.publish(mGoogleApiClient, thisPlayerNameMessage, options)
+                    .setResultCallback(new ResultCallback<Status>() {
+                        @Override
+                        public void onResult(@NonNull Status status) {
+                            if (status.isSuccess()) {
+                                Log.i(TAG, "Published successfully.");
+                            } else {
+                                Toast.makeText(getApplicationContext(), "failed to publish", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
         }
-        return true;
+
+    // subscribe for 30 secs to find other players
+    private void startFindingOtherPlayers() {
+        Log.i(TAG, "Subscribing");
+        mNearbyDevicesArrayAdapter.clear();
+        SubscribeOptions options = new SubscribeOptions.Builder()
+                .setStrategy(PUB_SUB_STRATEGY)
+                .setCallback(new SubscribeCallback() {
+                    @Override
+                    public void onExpired() {
+                        super.onExpired();
+                        Log.i(TAG, "No longer subscribing");
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getApplicationContext(), "subscribed for 30 secs", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                }).build();
+
+        Nearby.Messages.subscribe(mGoogleApiClient, mMessageListener, options)
+                .setResultCallback(new ResultCallback<Status>() {
+                    @Override
+                    public void onResult(@NonNull Status status) {
+                        if (status.isSuccess()) {
+                            Log.i(TAG, "Subscribed successfully.");
+                        } else {
+                            Toast.makeText(getApplicationContext(), "failed to subscribe", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
     }
 
+//    private void createMessageDialog() {
+//
+//        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+//
+//        // Get the layout inflater
+//        LayoutInflater inflater = this.getLayoutInflater();
+//
+//        // Inflate and set the layout for the dialog
+//        // Pass null as the parent view because its going in the dialog layout
+//        final View dialog_view = inflater.inflate(R.layout.dialog_message, null);
+//        builder.setView(dialog_view);
+//        builder.setPositiveButton(R.string.dialog_message_save, new DialogInterface.OnClickListener() {
+//            @Override
+//            public void onClick(DialogInterface dialog, int id) {
+//                mMessageText   = (EditText) dialog_view.findViewById(R.id.dialog_message);
+//                currentPubMessageString = mMessageText.getText().toString();
+//                saveCurrentPubMessage();
+//                mMessageText.setText("");
+//                currentPubMessage = new Message(currentPubMessageString.getBytes());
+//
+//                Toast.makeText(getApplicationContext(), "Sent message", Toast.LENGTH_LONG).show();
+//            }
+//        });
+//        builder.setNegativeButton(R.string.dialog_message_cancel, null);
+//
+//
+//
+//        mMessageDialog = builder.create();
+//
+//        currPubMessageDisplay = dialog_view.findViewById(R.id.dialog_current_message);
+//    }
+
+//    @Override
+//    public boolean onCreateOptionsMenu(Menu menu) {
+//        MenuInflater menuInflater = getMenuInflater();
+//        menuInflater.inflate(R.menu.menu, menu);
+//
+//        return true;
+//    }
+
+//    // shows the Current Message dialog
+//    @Override
+//    public boolean onOptionsItemSelected(MenuItem item) {
+//        int res_id = item.getItemId();
+//        if (res_id == R.id.action_message) {
+//
+//            if (currentPubMessageString != null && currPubMessageDisplay != null) {
+//                currPubMessageDisplay.setText(currentPubMessageString);
+//            }
+//            else {
+//                Log.i(TAG, "no message yet");
+//            }
+//
+//            mMessageDialog.show();
+//        }
+//        return true;
+//    }
 
 
-    private void receiveMessage(String newmsg) {
-        mNearbyDevicesArrayAdapter.add( newmsg.toString());
 
-    }
+//    private void receiveMessage(String newmsg) {
+//        mNearbyDevicesArrayAdapter.add( newmsg.toString());
+//
+//    }
 
     // TODO this is for testing purposes
     private void receiveFakeMessage() {
 
-        mMessageListener.onFound(new Message(("simulated message sent at " + System.currentTimeMillis()).getBytes()));
+        mMessageListener.onFound(new Message("myname: jared".getBytes()));
     }
 
-    // read from storage to get a current message being published and the list of all received msgs
-    // so they can be displayed
-    private void readFromStorage() {
-        // check if curr msg file already exists & if not create it
-        if (!getFileStreamPath(currMessageStorageFileName).exists()) {
-            try {
-                getFileStreamPath(currMessageStorageFileName).createNewFile();
-            } catch (IOException e) {
-                Log.i(TAG, "IO exception creating curr msg file");
-                e.printStackTrace();
-            }
-        }
-        // read curr msg file
-        try {
-            FileInputStream fis = openFileInput(currMessageStorageFileName);
-            BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-
-            String line;
-            String sep = System.getProperty("line.separator");
-
-            while (null != (line = br.readLine())) {
-                currentPubMessageString = line;
-            }
-
-            br.close();
-
-        } catch (IOException e) {
-            Log.i(TAG, "IOException");
-        }
-
-        //TODO for now fake received messages are added anytime the file is opened here instead of when received
-        // check if received msgs file already exists & if not create it
-        if (!getFileStreamPath(receivedMessagesStorageFileName).exists()) {
-            // read received msgs file
-            try {
-                FileInputStream fis = openFileInput(receivedMessagesStorageFileName);
-                BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-
-                String line;
-                String sep = System.getProperty("line.separator");
-
-                while (null != (line = br.readLine())) {
-                    mNearbyDevicesArrayAdapter.add(line);
-                }
-
-                br.close();
-
-            } catch (IOException e) {
-                Log.i(TAG, "IOException");
-            }
-        }
-    }
-
-    // store all received messages in internal storage
-    private void storeReceivedMessages() {
-
-        // check if received msgs file already exists & if not create it
-        if (!getFileStreamPath(receivedMessagesStorageFileName).exists()) {
-            try {
-                getFileStreamPath(receivedMessagesStorageFileName).createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-        }
-        try {
-            FileOutputStream fos = openFileOutput(receivedMessagesStorageFileName, MODE_APPEND);
-
-            PrintWriter pw = new PrintWriter(new BufferedWriter(
-                    new OutputStreamWriter(fos)));
-
-            for (int i=0; i<mNearbyDevicesArrayAdapter.getCount(); i++) {
-                pw.println(mNearbyDevicesArrayAdapter.getItem(i));
-            }
-
-            pw.close();
-        } catch (FileNotFoundException e) {
-            Log.i(TAG, "received messages file not found");
-        }
-    }
-
-    // when the currently broadcasting message is changed, save it to internal storage
-    private void saveCurrentPubMessage() {
-        // check if curr msg file already exists & if not create it, write new str to file
-        if (!getFileStreamPath(currMessageStorageFileName).exists()) {
-            try {
-                getFileStreamPath(currMessageStorageFileName).createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        try {
-            FileOutputStream fos = openFileOutput(currMessageStorageFileName, MODE_PRIVATE);
-
-            PrintWriter pw = new PrintWriter(new BufferedWriter(
-                    new OutputStreamWriter(fos)));
-
-            pw.println(currentPubMessageString);
-
-            pw.close();
-        } catch (IOException e) {
-            Log.i(TAG, "IO exception writing to curr msg file");
-            e.printStackTrace();
-        }
-    }
+//    // read from storage to get a current message being published and the list of all received msgs
+//    // so they can be displayed
+//    private void readFromStorage() {
+//        // check if curr msg file already exists & if not create it
+//        if (!getFileStreamPath(currMessageStorageFileName).exists()) {
+//            try {
+//                getFileStreamPath(currMessageStorageFileName).createNewFile();
+//            } catch (IOException e) {
+//                Log.i(TAG, "IO exception creating curr msg file");
+//                e.printStackTrace();
+//            }
+//        }
+//        // read curr msg file
+//        try {
+//            FileInputStream fis = openFileInput(currMessageStorageFileName);
+//            BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+//
+//            String line;
+//            String sep = System.getProperty("line.separator");
+//
+//            while (null != (line = br.readLine())) {
+//                currentPubMessageString = line;
+//            }
+//
+//            br.close();
+//
+//        } catch (IOException e) {
+//            Log.i(TAG, "IOException");
+//        }
+//
+//        //TODO for now fake received messages are added anytime the file is opened here instead of when received
+//        // check if received msgs file already exists & if not create it
+//        if (!getFileStreamPath(receivedMessagesStorageFileName).exists()) {
+//            // read received msgs file
+//            try {
+//                FileInputStream fis = openFileInput(receivedMessagesStorageFileName);
+//                BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+//
+//                String line;
+//                String sep = System.getProperty("line.separator");
+//
+//                while (null != (line = br.readLine())) {
+//                    mNearbyDevicesArrayAdapter.add(line);
+//                }
+//
+//                br.close();
+//
+//            } catch (IOException e) {
+//                Log.i(TAG, "IOException");
+//            }
+//        }
+//    }
+//
+//    // store all received messages in internal storage
+//    private void storeReceivedMessages() {
+//
+//        // check if received msgs file already exists & if not create it
+//        if (!getFileStreamPath(receivedMessagesStorageFileName).exists()) {
+//            try {
+//                getFileStreamPath(receivedMessagesStorageFileName).createNewFile();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//
+//        }
+//        try {
+//            FileOutputStream fos = openFileOutput(receivedMessagesStorageFileName, MODE_APPEND);
+//
+//            PrintWriter pw = new PrintWriter(new BufferedWriter(
+//                    new OutputStreamWriter(fos)));
+//
+//            for (int i=0; i<mNearbyDevicesArrayAdapter.getCount(); i++) {
+//                pw.println(mNearbyDevicesArrayAdapter.getItem(i));
+//            }
+//
+//            pw.close();
+//        } catch (FileNotFoundException e) {
+//            Log.i(TAG, "received messages file not found");
+//        }
+//    }
+//
+//    // when the currently broadcasting message is changed, save it to internal storage
+//    private void saveCurrentPubMessage() {
+//        // check if curr msg file already exists & if not create it, write new str to file
+//        if (!getFileStreamPath(currMessageStorageFileName).exists()) {
+//            try {
+//                getFileStreamPath(currMessageStorageFileName).createNewFile();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//        try {
+//            FileOutputStream fos = openFileOutput(currMessageStorageFileName, MODE_PRIVATE);
+//
+//            PrintWriter pw = new PrintWriter(new BufferedWriter(
+//                    new OutputStreamWriter(fos)));
+//
+//            pw.println(currentPubMessageString);
+//
+//            pw.close();
+//        } catch (IOException e) {
+//            Log.i(TAG, "IO exception writing to curr msg file");
+//            e.printStackTrace();
+//        }
+//    }
 
     /**
      * Builds {@link GoogleApiClient}, enabling automatic lifecycle management using
@@ -402,8 +518,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        mPublishSwitch.setEnabled(false);
-        mSubscribeSwitch.setEnabled(false);
+//        mPublishSwitch.setEnabled(false);
+//        mSubscribeSwitch.setEnabled(false);
         Log.i(TAG,"Exception while connecting to Google Play services: " +
                 connectionResult.getErrorMessage());
     }
@@ -421,108 +537,108 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         // when the activity is destroyed, foreground pubs/subs do not survive device rotation. Once
         // this activity is re-created and GoogleApiClient connects, we check the UI and pub/sub
         // again if necessary.
-        if (mPublishSwitch.isChecked()) {
-            publish();
-        }
-        if (mSubscribeSwitch.isChecked()) {
-            subscribe();
-        }
+//        if (mPublishSwitch.isChecked()) {
+//            publish();
+//        }
+//        if (mSubscribeSwitch.isChecked()) {
+//            subscribe();
+//        }
     }
 
     @Override
     protected void onStop() {
         Log.i(TAG, "onStop()");
         super.onStop();
-        storeReceivedMessages();
-        saveCurrentPubMessage();
+//        storeReceivedMessages();
+//        saveCurrentPubMessage();
 
-        if (mPublishSwitch.isChecked())
-            unpublish();
-
-        if (mSubscribeSwitch.isChecked())
-            unsubscribe();
+//        if (mPublishSwitch.isChecked())
+//            unpublish();
+//
+//        if (mSubscribeSwitch.isChecked())
+//            unsubscribe();
     }
-
-    /**
-     * Subscribes to messages from nearby devices and updates the UI if the subscription either
-     * fails or TTLs.
-     */
-    private void subscribe() {
-        Log.i(TAG, "Subscribing");
-        mNearbyDevicesArrayAdapter.clear();
-        SubscribeOptions options = new SubscribeOptions.Builder()
-                .setStrategy(PUB_SUB_STRATEGY)
-                .setCallback(new SubscribeCallback() {
-                    @Override
-                    public void onExpired() {
-                        super.onExpired();
-                        Log.i(TAG, "No longer subscribing");
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                mSubscribeSwitch.setChecked(false);
-                            }
-                        });
-                    }
-                }).build();
-
-        Nearby.Messages.subscribe(mGoogleApiClient, mMessageListener, options)
-                .setResultCallback(new ResultCallback<Status>() {
-                    @Override
-                    public void onResult(@NonNull Status status) {
-                        if (status.isSuccess()) {
-                            Log.i(TAG, "Subscribed successfully.");
-                        } else {
-                            mSubscribeSwitch.setChecked(false);
-                        }
-                    }
-                });
-    }
-
-    /**
-     * Publishes a message to nearby devices and updates the UI if the publication either fails or
-     * TTLs.
-     */
-    private void publish() {
-        Log.i(TAG, "Publishing");
-        PublishOptions options = new PublishOptions.Builder()
-                .setStrategy(PUB_SUB_STRATEGY)
-                .setCallback(new PublishCallback() {
-                    @Override
-                    public void onExpired() {
-                        super.onExpired();
-                        Log.i(TAG, "No longer publishing");
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                mPublishSwitch.setChecked(false);
-                            }
-                        });
-                    }
-                }).build();
-
-        if (currentPubMessage == null) {
-            Log.i(TAG, "message was null");
-            //currentPubMessageString = "No message is being published yet";
-            currentPubMessage = new Message(currentPubMessageString.getBytes());
-        }
-        else {
-        }
-        Nearby.Messages.publish(mGoogleApiClient, currentPubMessage, options)
-                .setResultCallback(new ResultCallback<Status>() {
-                    @Override
-                    public void onResult(@NonNull Status status) {
-                        if (status.isSuccess()) {
-                            Log.i(TAG, "Published successfully.");
-                        } else {
-                            Log.i(TAG, status.getStatus().toString());
-                            Log.i(TAG, status.getStatusMessage());
-                            Log.i(TAG, status.getStatusCode() + "");
-                            mPublishSwitch.setChecked(false);
-                        }
-                    }
-                });
-    }
+//
+//    /**
+//     * Subscribes to messages from nearby devices and updates the UI if the subscription either
+//     * fails or TTLs.
+//     */
+//    private void subscribe() {
+//        Log.i(TAG, "Subscribing");
+//        mNearbyDevicesArrayAdapter.clear();
+//        SubscribeOptions options = new SubscribeOptions.Builder()
+//                .setStrategy(PUB_SUB_STRATEGY)
+//                .setCallback(new SubscribeCallback() {
+//                    @Override
+//                    public void onExpired() {
+//                        super.onExpired();
+//                        Log.i(TAG, "No longer subscribing");
+//                        runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                mSubscribeSwitch.setChecked(false);
+//                            }
+//                        });
+//                    }
+//                }).build();
+//
+//        Nearby.Messages.subscribe(mGoogleApiClient, mMessageListener, options)
+//                .setResultCallback(new ResultCallback<Status>() {
+//                    @Override
+//                    public void onResult(@NonNull Status status) {
+//                        if (status.isSuccess()) {
+//                            Log.i(TAG, "Subscribed successfully.");
+//                        } else {
+//                            mSubscribeSwitch.setChecked(false);
+//                        }
+//                    }
+//                });
+//    }
+//
+//    /**
+//     * Publishes a message to nearby devices and updates the UI if the publication either fails or
+//     * TTLs.
+//     */
+//    private void publish() {
+//        Log.i(TAG, "Publishing");
+//        PublishOptions options = new PublishOptions.Builder()
+//                .setStrategy(PUB_SUB_STRATEGY)
+//                .setCallback(new PublishCallback() {
+//                    @Override
+//                    public void onExpired() {
+//                        super.onExpired();
+//                        Log.i(TAG, "No longer publishing");
+//                        runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                mPublishSwitch.setChecked(false);
+//                            }
+//                        });
+//                    }
+//                }).build();
+//
+//        if (currentPubMessage == null) {
+//            Log.i(TAG, "message was null");
+//            //currentPubMessageString = "No message is being published yet";
+//            currentPubMessage = new Message(currentPubMessageString.getBytes());
+//        }
+//        else {
+//        }
+//        Nearby.Messages.publish(mGoogleApiClient, currentPubMessage, options)
+//                .setResultCallback(new ResultCallback<Status>() {
+//                    @Override
+//                    public void onResult(@NonNull Status status) {
+//                        if (status.isSuccess()) {
+//                            Log.i(TAG, "Published successfully.");
+//                        } else {
+//                            Log.i(TAG, status.getStatus().toString());
+//                            Log.i(TAG, status.getStatusMessage());
+//                            Log.i(TAG, status.getStatusCode() + "");
+//                            mPublishSwitch.setChecked(false);
+//                        }
+//                    }
+//                });
+//    }
 
     /**
      * Stops subscribing to messages from nearby devices.
@@ -537,7 +653,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
      */
     private void unpublish() {
         Log.i(TAG, "Unpublishing.");
-        Nearby.Messages.unpublish(mGoogleApiClient, currentPubMessage);
+        Nearby.Messages.unpublish(mGoogleApiClient, thisPlayerNameMessage);
     }
 
 }
