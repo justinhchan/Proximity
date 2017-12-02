@@ -7,19 +7,13 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.SwitchCompat;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -37,15 +31,6 @@ import com.google.android.gms.nearby.messages.Strategy;
 import com.google.android.gms.nearby.messages.SubscribeCallback;
 import com.google.android.gms.nearby.messages.SubscribeOptions;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -121,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     //variables for guess who game
     private String thisPlayerName;
-    private Message thisPlayerNameMessage;
+    private Message currentPublishingMessage;
     private List<String> otherPlayers;
     private AlertDialog namePromptDialog;
     private Boolean isGameRunner;
@@ -150,6 +135,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     String otherPlayerName = messageContent.split(" ")[1];
                     otherPlayers.add(otherPlayerName);
                     Toast.makeText(getApplicationContext(), "Found " + otherPlayerName, Toast.LENGTH_SHORT).show();
+                }
+                else if (messageContent.startsWith("gamerunner")) {
+                    String gameRunner = messageContent.split(" ")[1];
+                    Log.i(TAG, gameRunner + " is the game runner");
+                    if (isGameRunner) {
+                        Log.i(TAG, "game runner conflict");
+                        // we have a problem
+                    }
                 }
                 Log.i(TAG, "received message " + new String(message.getContent()));
             }
@@ -276,8 +269,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     }).build();
 
             // publish a message "myname: <name>". other devices will extract the name from the message and add to their list
-            thisPlayerNameMessage = new Message(("myname: " + thisPlayerName).getBytes());
-            Nearby.Messages.publish(mGoogleApiClient, thisPlayerNameMessage, options)
+            currentPublishingMessage = new Message(("myname: " + thisPlayerName).getBytes());
+            Nearby.Messages.publish(mGoogleApiClient, currentPublishingMessage, options)
                     .setResultCallback(new ResultCallback<Status>() {
                         @Override
                         public void onResult(@NonNull Status status) {
@@ -336,11 +329,86 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if (alphaFirstUser.compareTo(thisPlayerName) == 0) {
             //this device is the game runner
             isGameRunner = true;
-
-            //todo (to make the protocol more consistent) tell all the other devices that we are the game runner and resolve conflicts
         }
 
+        //check for potential game runner conflicts
+        advertiseGameRunner();
+
         // then we start a round of the game (2b in the tasks doc)
+    }
+
+    private void advertiseGameRunner() {
+        if (isGameRunner) {
+            // publish "i am the game runner" to other devices
+            Log.i(TAG, "Publishing");
+            PublishOptions options = new PublishOptions.Builder()
+                    .setStrategy(PUB_SUB_STRATEGY)
+                    .setCallback(new PublishCallback() {
+                        @Override
+                        public void onExpired() {
+                            super.onExpired();
+                            Log.i(TAG, "No longer publishing");
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(getApplicationContext(), "published game runner", Toast.LENGTH_SHORT).show();
+                                    startGameRound();
+                                }
+                            });
+                        }
+                    }).build();
+
+            // publish a message "myname: <name>". other devices will extract the name from the message and add to their list
+            currentPublishingMessage = new Message(("gamerunner: " + thisPlayerName).getBytes());
+            Nearby.Messages.publish(mGoogleApiClient, currentPublishingMessage, options)
+                    .setResultCallback(new ResultCallback<Status>() {
+                        @Override
+                        public void onResult(@NonNull Status status) {
+                            if (status.isSuccess()) {
+                                Log.i(TAG, "Published successfully.");
+                            } else {
+                                Toast.makeText(getApplicationContext(), "failed to publish", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+        }
+
+        // subscribe to recieve game runner message from the game runner
+        Log.i(TAG, "Subscribing");
+        mNearbyDevicesArrayAdapter.clear();
+        SubscribeOptions options = new SubscribeOptions.Builder()
+                .setStrategy(PUB_SUB_STRATEGY)
+                .setCallback(new SubscribeCallback() {
+                    @Override
+                    public void onExpired() {
+                        super.onExpired();
+                        Log.i(TAG, "No longer subscribing");
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(getApplicationContext(), "subscribed for 15 secs", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                }).build();
+
+        Nearby.Messages.subscribe(mGoogleApiClient, mMessageListener, options)
+                .setResultCallback(new ResultCallback<Status>() {
+                    @Override
+                    public void onResult(@NonNull Status status) {
+                        if (status.isSuccess()) {
+                            Log.i(TAG, "Subscribed successfully.");
+                        } else {
+                            Toast.makeText(getApplicationContext(), "failed to subscribe", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+    }
+
+    private void startGameRound() {
+        if (isGameRunner) {
+            // randomly select user to be the Message Sender
+        }
     }
 
 //    private void createMessageDialog() {
@@ -675,7 +743,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
      */
     private void unpublish() {
         Log.i(TAG, "Unpublishing.");
-        Nearby.Messages.unpublish(mGoogleApiClient, thisPlayerNameMessage);
+        Nearby.Messages.unpublish(mGoogleApiClient, currentPublishingMessage);
     }
 
 }
