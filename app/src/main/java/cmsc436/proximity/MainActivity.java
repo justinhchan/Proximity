@@ -10,11 +10,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -30,6 +34,8 @@ import com.google.android.gms.nearby.messages.PublishOptions;
 import com.google.android.gms.nearby.messages.Strategy;
 import com.google.android.gms.nearby.messages.SubscribeCallback;
 import com.google.android.gms.nearby.messages.SubscribeOptions;
+
+import org.w3c.dom.Text;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -105,10 +111,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //    private String receivedMessagesStorageFileName = "allMessagesFile";
 
     //variables for guess who game
-    private String thisPlayerName;
+    private String thisPlayerName = "";
     private Message currentPublishingMessage;
     private List<String> otherPlayers;
-    private AlertDialog namePromptDialog;
+    private AlertDialog mProfileDialog;
     private Boolean isGameRunner;
 
     @Override
@@ -215,39 +221,48 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //        readFromStorage();
     }
 
+    /* Creates action bar menu */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater menuInflater = getMenuInflater();
+        menuInflater.inflate(R.menu.menu, menu);
+
+        return true;
+    }
+
     // open a prompt asking for user's name
     // start publishing the user's name to nearby devices
     // start subscribing for other players' names from nearby devices
     // after 30 seconds stop subscribing and publishing
     private void startGame() {
-        openNamePrompt();
+//        openNamePrompt();
     }
 
-    private void openNamePrompt() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
-        // Get the layout inflater
-        LayoutInflater inflater = this.getLayoutInflater();
-
-        // Inflate and set the layout for the dialog
-        // Pass null as the parent view because its going in the dialog layout
-        final View dialog_view = inflater.inflate(R.layout.nameprompt, null);
-        builder.setView(dialog_view);
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int id) {
-                EditText nameEntry   = (EditText) dialog_view.findViewById(R.id.dialog_name);
-                thisPlayerName = nameEntry.getText().toString();
-                nameEntry.setText("");
-
-                startPublishingName();
-                startFindingOtherPlayers();
-            }
-        });
-
-        namePromptDialog = builder.create();
-        namePromptDialog.show();
-    }
+//    private void openNamePrompt() {
+//        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+//
+//        // Get the layout inflater
+//        LayoutInflater inflater = this.getLayoutInflater();
+//
+//        // Inflate and set the layout for the dialog
+//        // Pass null as the parent view because its going in the dialog layout
+//        final View dialog_view = inflater.inflate(R.layout.nameprompt, null);
+//        builder.setView(dialog_view);
+//        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+//            @Override
+//            public void onClick(DialogInterface dialog, int id) {
+//                EditText nameEntry   = (EditText) dialog_view.findViewById(R.id.dialog_name);
+//                thisPlayerName = nameEntry.getText().toString();
+//                nameEntry.setText("");
+//
+//                startPublishingName();
+//                startFindingOtherPlayers();
+//            }
+//        });
+//
+//        profileDialog = builder.create();
+//        profileDialog.show();
+//    }
 
     // publish this player's name to nearby devices for 30 secs
     private void startPublishingName() {
@@ -411,6 +426,46 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
+    /**
+     * Creates the dialog box for the user's profile, which allows the user to change his/her
+     * public name that gets attached to the message.
+     */
+    private void createProfileDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        // Get the layout inflater
+        LayoutInflater inflater = this.getLayoutInflater();
+
+        // Inflate and set the layout for the dialog
+        // Pass null as the parent view because its going in the dialog layout
+        final View dialog_view = inflater.inflate(R.layout.dialog_profile, null);
+
+        builder.setView(dialog_view);
+
+        // Sets the text to the current name
+        if (thisPlayerName != "") {
+
+            TextView currentName = (TextView) dialog_view.findViewById(R.id.dialog_profile_current_text);
+            Log.i(TAG, "setting current name from " + currentName.getText().toString() + " to " + thisPlayerName);
+            currentName.setText(thisPlayerName);
+        }
+
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int id) {
+                EditText nameEntry   = (EditText) dialog_view.findViewById(R.id.dialog_profile_name);
+
+                if( !nameEntry.getText().toString().trim().equals("") ) {
+                    thisPlayerName = nameEntry.getText().toString();
+                    Log.i(TAG, "player name set to: " + thisPlayerName);
+                }
+            }
+        });
+
+        mProfileDialog = builder.create();
+        mProfileDialog.show();
+    }
+
 //    private void createMessageDialog() {
 //
 //        AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -443,20 +498,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //        currPubMessageDisplay = dialog_view.findViewById(R.id.dialog_current_message);
 //    }
 
-//    @Override
-//    public boolean onCreateOptionsMenu(Menu menu) {
-//        MenuInflater menuInflater = getMenuInflater();
-//        menuInflater.inflate(R.menu.menu, menu);
-//
-//        return true;
-//    }
 
-//    // shows the Current Message dialog
-//    @Override
-//    public boolean onOptionsItemSelected(MenuItem item) {
-//        int res_id = item.getItemId();
-//        if (res_id == R.id.action_message) {
-//
+    // shows the Current Message dialog
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int res_id = item.getItemId();
+        if (res_id == R.id.action_message) {
+
 //            if (currentPubMessageString != null && currPubMessageDisplay != null) {
 //                currPubMessageDisplay.setText(currentPubMessageString);
 //            }
@@ -465,9 +513,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //            }
 //
 //            mMessageDialog.show();
-//        }
-//        return true;
-//    }
+        } else if (res_id == R.id.action_profile) {
+
+
+            createProfileDialog();
+        }
+        return true;
+    }
 
 
 

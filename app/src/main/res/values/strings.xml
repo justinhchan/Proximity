@@ -5,6 +5,7 @@
     <string name="share_message">Share message</string>
 
     <string name="message_action">Compose Message</string>
+    <string name="profile_action">View Profile</string>
 
     <string name="dialog_message_header">Current Message</string>
     <string name="dialog_message_save">Submit</string>

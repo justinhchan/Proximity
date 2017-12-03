@@ -14,7 +14,7 @@
 
     <Button
         android:id="@+id/startgamebtn"
-        android:text="Start Guess Who Game"
+        android:text="Start Game"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 
