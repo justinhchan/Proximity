@@ -15,6 +15,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -132,8 +133,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 // Called when a new message is found.
                 String messageContent = new String(message.getContent());
                 if (messageContent.startsWith("myname: ")) {
+                    Log.i(TAG, "message from " + new String(message.getContent()));
                     String otherPlayerName = messageContent.split(" ")[1];
                     otherPlayers.add(otherPlayerName);
+                    // Using otherPlayerName to populate list of messages for testing purposes
+                    // In the finished app, we will be using actual messages to populate the list
+                    // instead of using playerNames
+                    mNearbyDevicesArrayAdapter.add(otherPlayerName);
                     Toast.makeText(getApplicationContext(), "Found " + otherPlayerName, Toast.LENGTH_SHORT).show();
                 }
                 else if (messageContent.startsWith("gamerunner")) {
@@ -201,18 +207,37 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         });
 
-        final List<String> nearbyDevicesArrayList = new ArrayList<>();
+        List<String> nearbyDevicesArrayList = new ArrayList<>();
         mNearbyDevicesArrayAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1,
                 nearbyDevicesArrayList);
-        final ListView nearbyDevicesListView = (ListView) findViewById(
+        ListView nearbyDevicesListView = (ListView) findViewById(
                 R.id.nearby_devices_list_view);
+
+        // Using ListActivity's setEmptyView method automatically
+        // checks if the adapter is empty or not. If the adapter is
+        // empty, then is displays "No messages received." Otherwise,
+        // it populates the ListView with messages from the array
+        TextView emptyText = (TextView) findViewById(R.id.emptyT);
+        nearbyDevicesListView.setEmptyView(emptyText);
+        nearbyDevicesListView.setAdapter(mNearbyDevicesArrayAdapter);
+
+        // Populate the ListView with nearbyDevices
+        /*
         if (nearbyDevicesListView != null) {
             nearbyDevicesListView.setAdapter(mNearbyDevicesArrayAdapter);
-        }
+        // No messages have been received
+        } else {
+            TextView emptyText = (TextView) findViewById(android.R.id.empty);
+            nearbyDevicesListView.setEmptyView(emptyText);
+        } */
         buildGoogleApiClient();
 
 //        readFromStorage();
+    }
+
+    private void setEmptyText() {
+        TextView emptyText = (TextView) findViewById(android.R.id.empty);
     }
 
     // open a prompt asking for user's name
