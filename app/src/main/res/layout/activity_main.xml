@@ -12,12 +12,6 @@
         android:id="@+id/action_bar">
     </include>
 
-    <Button
-        android:id="@+id/startgamebtn"
-        android:text="Start Game"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-
     <android.support.v7.widget.SwitchCompat
         android:id="@+id/subscribe_switch"
         android:layout_width="match_parent"
@@ -42,11 +36,26 @@
         android:textStyle="bold|italic" />
 
 
-    <Button
-        android:id="@+id/fakemsgbtn"
-        android:text="Receive Fake Message for testing purposes"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/startgamebtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Start Game"
+            android:textAppearance="@android:style/TextAppearance.Material.Widget.Button" />
+
+        <Button
+            android:id="@+id/clearbtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Clear List" />
+    </LinearLayout>
 
     <ListView
         android:id="@+id/nearby_devices_list_view"

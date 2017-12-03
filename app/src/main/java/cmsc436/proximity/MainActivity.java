@@ -88,15 +88,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private Toolbar mToolbar;
 //    private SwitchCompat mPublishSwitch;
 //    private SwitchCompat mSubscribeSwitch;
-//    private AlertDialog mMessageDialog;
-//    private EditText mMessageText;
-//    private TextView currPubMessageDisplay;
-
-    /**
-     * The {@link Message} object used to broadcast information about the device to nearby devices.
-     */
-//    private Message currentPubMessage;
-//    private String currentPubMessageString;
+    private AlertDialog mMessageDialog;
 
     /**
      * A {@link MessageListener} for processing messages from nearby devices.
@@ -112,10 +104,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //    private String currMessageStorageFileName = "currMessageFile";
 //    private String receivedMessagesStorageFileName = "allMessagesFile";
 
-    //variables for guess who game
-    private String thisPlayerName = "";
-    private Message currentPublishingMessage;
+    /* Variables for current objects */
+    private String mCurrentUser = "";
+    private DeviceMessage mCurrentMessage;
+    private Message mCurrentPublishingMessage;
+
     private ArrayList<String> otherPlayers;
+
     private AlertDialog mProfileDialog;
     private Boolean isGameRunner;
 
@@ -137,27 +132,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mMessageListener = new MessageListener() {
             @Override
             public void onFound(final Message message) {
-                // Called when a new message is found.
                 String messageContent = new String(message.getContent());
-                if (messageContent.startsWith("myname: ")) {
-                    Log.i(TAG, "message from " + new String(message.getContent()));
-                    String otherPlayerName = messageContent.split(" ")[1];
-                    otherPlayers.add(otherPlayerName);
-                    // Using otherPlayerName to populate list of messages for testing purposes
-                    // In the finished app, we will be using actual messages to populate the list
-                    // instead of using playerNames
-                    mNearbyDevicesArrayAdapter.add(otherPlayerName);
-                    Toast.makeText(getApplicationContext(), "Found " + otherPlayerName, Toast.LENGTH_SHORT).show();
-                }
-                else if (messageContent.startsWith("gamerunner")) {
-                    String gameRunner = messageContent.split(" ")[1];
-                    Log.i(TAG, gameRunner + " is the game runner");
-                    if (isGameRunner) {
-                        Log.i(TAG, "game runner conflict");
-                        // we have a problem
-                    }
-                }
-                Log.i(TAG, "received message " + new String(message.getContent()));
+                // Called when a new message is found.
+                Log.i(TAG, "received message " + messageContent);
+
+                mNearbyDevicesArrayAdapter.add(messageContent);
             }
 
             @Override
@@ -203,14 +182,21 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         Button startGameBtn = findViewById(R.id.startgamebtn);
         startGameBtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) { startGame(); }
+            public void onClick(View view) {
+                if (mCurrentUser.equals("") || mCurrentMessage == null) {
+                    Toast.makeText(getApplicationContext(), "BOTH your name and message need to be set before starting.", Toast.LENGTH_LONG).show();
+                } else {
+                    startGame();
+                }
+            }
         });
 
-        Button fakeMsgBtn = findViewById(R.id.fakemsgbtn);
-        fakeMsgBtn.setOnClickListener(new View.OnClickListener() {
+        Button clearListBtn = findViewById(R.id.clearbtn);
+        clearListBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                receiveFakeMessage();
+                mNearbyDevicesArrayAdapter.clear();
+                Log.i(TAG, "Cleared list of received messages.");
             }
         });
 
@@ -270,7 +256,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     // start subscribing for other players' names from nearby devices
     // after 30 seconds stop subscribing and publishing
     private void startGame() {
-//        openNamePrompt();
+
+        for (int i = 0; i < 5; i++) {
+            String tempName = mCurrentUser + i;
+            DeviceMessage testMessageObj = new DeviceMessage(tempName, "test " + i + " from " + tempName);
+            sendMessage(testMessageObj);
+//            sendMessage(mCurrentMessage);
+        }
+    }
+
+    private void sendMessage(DeviceMessage msgObj) {
+        otherPlayers.add(msgObj.getSender());
+        mMessageListener.onFound(msgObj.getMessageBody());
     }
 
 //    private void openNamePrompt() {
@@ -287,7 +284,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //            @Override
 //            public void onClick(DialogInterface dialog, int id) {
 //                EditText nameEntry   = (EditText) dialog_view.findViewById(R.id.dialog_name);
-//                thisPlayerName = nameEntry.getText().toString();
+//                mCurrentUser = nameEntry.getText().toString();
 //                nameEntry.setText("");
 //
 //                startPublishingName();
@@ -319,8 +316,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     }).build();
 
             // publish a message "myname: <name>". other devices will extract the name from the message and add to their list
-            currentPublishingMessage = new Message(("myname: " + thisPlayerName).getBytes());
-            Nearby.Messages.publish(mGoogleApiClient, currentPublishingMessage, options)
+            mCurrentPublishingMessage = new Message(("myname: " + mCurrentUser).getBytes());
+            Nearby.Messages.publish(mGoogleApiClient, mCurrentPublishingMessage, options)
                     .setResultCallback(new ResultCallback<Status>() {
                         @Override
                         public void onResult(@NonNull Status status) {
@@ -369,14 +366,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     // pick a device to run the game by choosing the alphabeticallly first user
     private void pickGameRunner() {
-        String alphaFirstUser = thisPlayerName;
+        String alphaFirstUser = mCurrentUser;
         for (String user : otherPlayers) {
             if (alphaFirstUser.compareTo(user) > 0) {
                 alphaFirstUser = user;
             }
         }
 
-        if (alphaFirstUser.compareTo(thisPlayerName) == 0) {
+        if (alphaFirstUser.compareTo(mCurrentUser) == 0) {
             //this device is the game runner
             isGameRunner = true;
         }
@@ -409,8 +406,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     }).build();
 
             // publish a message "myname: <name>". other devices will extract the name from the message and add to their list
-            currentPublishingMessage = new Message(("gamerunner: " + thisPlayerName).getBytes());
-            Nearby.Messages.publish(mGoogleApiClient, currentPublishingMessage, options)
+            mCurrentPublishingMessage = new Message(("gamerunner: " + mCurrentUser).getBytes());
+            Nearby.Messages.publish(mGoogleApiClient, mCurrentPublishingMessage, options)
                     .setResultCallback(new ResultCallback<Status>() {
                         @Override
                         public void onResult(@NonNull Status status) {
@@ -474,25 +471,28 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         // Inflate and set the layout for the dialog
         // Pass null as the parent view because its going in the dialog layout
         final View dialog_view = inflater.inflate(R.layout.dialog_profile, null);
-
-        builder.setView(dialog_view);
-
+        
         // Sets the text to the current name
-        if (thisPlayerName != "") {
+        if (!mCurrentUser.equals("")) {
 
             TextView currentName = (TextView) dialog_view.findViewById(R.id.dialog_profile_current_text);
-            Log.i(TAG, "setting current name from " + currentName.getText().toString() + " to " + thisPlayerName);
-            currentName.setText(thisPlayerName);
+            Log.i(TAG, "setting current name from " + currentName.getText().toString() + " to " + mCurrentUser);
+            currentName.setText(mCurrentUser);
         }
+        builder.setView(dialog_view);
 
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+        builder.setPositiveButton(R.string.dialog_message_save, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int id) {
-                EditText nameEntry   = (EditText) dialog_view.findViewById(R.id.dialog_profile_name);
+                EditText nameEntry = (EditText) dialog_view.findViewById(R.id.dialog_profile_name);
 
-                if( !nameEntry.getText().toString().trim().equals("") ) {
-                    thisPlayerName = nameEntry.getText().toString();
-                    Log.i(TAG, "player name set to: " + thisPlayerName);
+                if( nameEntry.getText().toString().trim().equals("") ) {
+                    Toast.makeText(getApplicationContext(), "Invalid name.", Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                } else {
+                    mCurrentUser = nameEntry.getText().toString().trim();
+                    Log.i(TAG, "player name set to: " + mCurrentUser);
+                    Toast.makeText(getApplicationContext(), "Name set to " + mCurrentUser, Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -501,55 +501,62 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mProfileDialog.show();
     }
 
-//    private void createMessageDialog() {
-//
-//        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-//
-//        // Get the layout inflater
-//        LayoutInflater inflater = this.getLayoutInflater();
-//
-//        // Inflate and set the layout for the dialog
-//        // Pass null as the parent view because its going in the dialog layout
-//        final View dialog_view = inflater.inflate(R.layout.dialog_message, null);
-//        builder.setView(dialog_view);
-//        builder.setPositiveButton(R.string.dialog_message_save, new DialogInterface.OnClickListener() {
-//            @Override
-//            public void onClick(DialogInterface dialog, int id) {
-//                mMessageText   = (EditText) dialog_view.findViewById(R.id.dialog_message);
-//                currentPubMessageString = mMessageText.getText().toString();
-//                saveCurrentPubMessage();
-//                mMessageText.setText("");
-//                currentPubMessage = new Message(currentPubMessageString.getBytes());
-//
-//                Toast.makeText(getApplicationContext(), "Sent message", Toast.LENGTH_LONG).show();
-//            }
-//        });
-//        builder.setNegativeButton(R.string.dialog_message_cancel, null);
-//
-//
-//
-//        mMessageDialog = builder.create();
-//
+    private void createMessageDialog() {
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        // Get the layout inflater
+        LayoutInflater inflater = this.getLayoutInflater();
+
+        // Inflate and set the layout for the dialog
+        // Pass null as the parent view because its going in the dialog layout
+        final View dialog_view = inflater.inflate(R.layout.dialog_message, null);
+
+        if (mCurrentMessage != null) {
+
+            String currentMessageString = mCurrentMessage.getMessageString();
+
+            TextView currentMessageView = (TextView) dialog_view.findViewById(R.id.dialog_message_current_text);
+            Log.i(TAG, "setting current message from " + currentMessageView.getText().toString() + " to " + currentMessageString);
+            currentMessageView.setText(currentMessageString);
+        }
+        builder.setView(dialog_view);
+
+        builder.setPositiveButton(R.string.dialog_message_save, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int id) {
+
+                EditText messageEntry = (EditText) dialog_view.findViewById(R.id.dialog_message_message);
+                if (mCurrentUser.equals("")) {
+                    Toast.makeText(getApplicationContext(), "Please set your name first.", Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                } else if (messageEntry.getText().toString().trim().equals("")) {
+                    Toast.makeText(getApplicationContext(), "Invalid message.", Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                } else {
+                    mCurrentMessage = new DeviceMessage(mCurrentUser, messageEntry.getText().toString());
+                    mCurrentPublishingMessage = mCurrentMessage.getMessageBody();
+                    Log.i(TAG, "setting new message: " + mCurrentMessage.getMessageString());
+                    Toast.makeText(getApplicationContext(), "Message set to " + mCurrentMessage.getMessageString(), Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        mMessageDialog = builder.create();
+        mMessageDialog.show();
+
 //        currPubMessageDisplay = dialog_view.findViewById(R.id.dialog_current_message);
-//    }
+    }
 
 
-    // shows the Current Message dialog
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int res_id = item.getItemId();
         if (res_id == R.id.action_message) {
 
-//            if (currentPubMessageString != null && currPubMessageDisplay != null) {
-//                currPubMessageDisplay.setText(currentPubMessageString);
-//            }
-//            else {
-//                Log.i(TAG, "no message yet");
-//            }
-//
-//            mMessageDialog.show();
-        } else if (res_id == R.id.action_profile) {
+          createMessageDialog();
 
+        } else if (res_id == R.id.action_profile) {
 
             createProfileDialog();
         }
@@ -562,12 +569,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //        mNearbyDevicesArrayAdapter.add( newmsg.toString());
 //
 //    }
-
-    // TODO this is for testing purposes
-    private void receiveFakeMessage() {
-
-        mMessageListener.onFound(new Message("myname: jared".getBytes()));
-    }
 
 //    // read from storage to get a current message being published and the list of all received msgs
 //    // so they can be displayed
@@ -599,7 +600,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //            Log.i(TAG, "IOException");
 //        }
 //
-//        //TODO for now fake received messages are added anytime the file is opened here instead of when received
 //        // check if received msgs file already exists & if not create it
 //        if (!getFileStreamPath(receivedMessagesStorageFileName).exists()) {
 //            // read received msgs file
@@ -830,7 +830,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
      */
     private void unpublish() {
         Log.i(TAG, "Unpublishing.");
-        Nearby.Messages.unpublish(mGoogleApiClient, currentPublishingMessage);
+        Nearby.Messages.unpublish(mGoogleApiClient, mCurrentPublishingMessage);
     }
 
 }
