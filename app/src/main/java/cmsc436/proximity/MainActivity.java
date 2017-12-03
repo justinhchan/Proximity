@@ -1,6 +1,7 @@
 package cmsc436.proximity;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -14,6 +15,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -106,8 +108,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private String mCurrentUser = "";
     private DeviceMessage mCurrentMessage;
     private Message mCurrentPublishingMessage;
-    
-    private List<String> otherPlayers;
+
+    private ArrayList<String> otherPlayers;
+
     private AlertDialog mProfileDialog;
     private Boolean isGameRunner;
 
@@ -196,7 +199,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         });
 
-        List<String> nearbyDevicesArrayList = new ArrayList<>();
+        final ArrayList<String> nearbyDevicesArrayList = new ArrayList<>();
         mNearbyDevicesArrayAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1,
                 nearbyDevicesArrayList);
@@ -206,20 +209,33 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         // Using ListActivity's setEmptyView method automatically
         // checks if the adapter is empty or not. If the adapter is
         // empty, then is displays "No messages received." Otherwise,
-        // it populates the ListView with messages from the array
+        // it populates the ListView with messages from the array.
         TextView emptyText = (TextView) findViewById(R.id.emptyT);
         nearbyDevicesListView.setEmptyView(emptyText);
         nearbyDevicesListView.setAdapter(mNearbyDevicesArrayAdapter);
 
-        // Populate the ListView with nearbyDevices
-        /*
-        if (nearbyDevicesListView != null) {
-            nearbyDevicesListView.setAdapter(mNearbyDevicesArrayAdapter);
-        // No messages have been received
-        } else {
-            TextView emptyText = (TextView) findViewById(android.R.id.empty);
-            nearbyDevicesListView.setEmptyView(emptyText);
-        } */
+        // When a message in the ListView is selected, the user is sent to
+        // a page that displays the message and a list of possible users who
+        // could've sent that message.
+        // TODO: When a user rapidly clicks on the message, multiple activites are
+        // created
+        nearbyDevicesListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                Intent intent = new Intent(MainActivity.this, ChooseMessageActivity.class);
+                Bundle mBundle = new Bundle();
+                // Retrieve otherPlayers list to send into the new activity
+                mBundle.putStringArrayList("otherPlayers", otherPlayers);
+                // Player who sent the message
+                // mBundle.putString("gameRunner", gameRunner);
+                // Message that was selected
+                // mBundle.putString("message", message);
+                intent.putExtras(mBundle);
+                // Should be startActivity for result which indicates
+                // a score based on correct guess
+                startActivity(intent);
+            }
+        });
         buildGoogleApiClient();
 
 //        readFromStorage();
@@ -232,10 +248,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         menuInflater.inflate(R.menu.menu, menu);
 
         return true;
-    }
-          
-    private void setEmptyText() {
-        TextView emptyText = (TextView) findViewById(android.R.id.empty);
     }
 
     // open a prompt asking for user's name
