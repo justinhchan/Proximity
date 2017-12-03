@@ -108,6 +108,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private String mCurrentUser = "";
     private DeviceMessage mCurrentMessage;
     private Message mCurrentPublishingMessage;
+    private int mHighScore;
 
     private ArrayList<String> otherPlayers;
 
@@ -126,6 +127,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //        mPublishSwitch = (SwitchCompat) findViewById(R.id.publish_switch);
 
         otherPlayers = new ArrayList<String>();
+        mHighScore = 0;
         isGameRunner = false;
 //        createMessageDialog();
 
@@ -479,6 +481,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             Log.i(TAG, "setting current name from " + currentName.getText().toString() + " to " + mCurrentUser);
             currentName.setText(mCurrentUser);
         }
+
+        // Sets the text to the current high score
+        TextView profileScoreView = (TextView) dialog_view.findViewById(R.id.dialog_profile_score);
+        int profileScore = Integer.parseInt(profileScoreView.getText().toString());
+        if (mHighScore != profileScore) {
+            profileScoreView.setText(Integer.toString(mHighScore));
+            Log.i(TAG, "set new high score to " + mHighScore);
+        }
+
         builder.setView(dialog_view);
 
         builder.setPositiveButton(R.string.dialog_message_save, new DialogInterface.OnClickListener() {
