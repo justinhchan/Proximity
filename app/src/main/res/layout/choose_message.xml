@@ -1,23 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent">
 
-    <ListView
-        android:id="@+id/playersListView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="10dp"
-        android:layout_marginTop="@dimen/activity_vertical_margin"
-        android:transcriptMode="alwaysScroll" />
-
+    <!-- Header -->
     <TextView
-        android:id="@+id/emptyT"
+        android:id="@+id/top_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:gravity="center"
-        android:text="No messages have been received"/>
+        android:gravity="center_horizontal"
+        android:text="@+string/header_text" />
 
-</LinearLayout>
+    <LinearLayout
+        android:id="@+id/linearLayoutChoose"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/top_header"
+        android:orientation="vertical">
+
+        <ListView
+            android:id="@+id/playersListView"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="10dp"
+            android:layout_marginTop="@dimen/activity_vertical_margin"
+            android:transcriptMode="alwaysScroll" />
+
+        <TextView
+            android:id="@+id/emptyPlayers"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:text="No players are in the game"/>
+
+    </LinearLayout>
+</RelativeLayout>
+

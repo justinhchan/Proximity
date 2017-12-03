@@ -35,11 +35,15 @@ public class ChooseMessageActivity extends Activity {
         ListView playersListView = (ListView) findViewById(
                 R.id.playersListView);
 
-        TextView emptyText = (TextView) findViewById(R.id.emptyT);
+        TextView emptyText = (TextView) findViewById(R.id.emptyPlayers);
         playersListView.setEmptyView(emptyText);
         playersListView.setAdapter(mPlayersListAdapter);
 
-        // User gets one guess to choose to co
+        final TextView headerView = (TextView) findViewById(R.id.top_header);
+        headerView.setText("Guess which player sent the message: ");
+        //TODO: retrieve message the user has clicked
+
+        // User gets one guess to choose to correct player
         playersListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
