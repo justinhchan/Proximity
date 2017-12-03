@@ -191,11 +191,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         });
 
-        Button fakeMsgBtn = findViewById(R.id.fakemsgbtn);
-        fakeMsgBtn.setOnClickListener(new View.OnClickListener() {
+        Button clearListBtn = findViewById(R.id.clearbtn);
+        clearListBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                receiveFakeMessage();
+                mNearbyDevicesArrayAdapter.clear();
+                Log.i(TAG, "Cleared list of received messages.");
             }
         });
 
@@ -257,9 +258,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private void startGame() {
 
         for (int i = 0; i < 5; i++) {
-//            String tempName = mCurrentUser + i;
-//            DeviceMessage testMessageObj = new DeviceMessage(tempName, "test " + i + " from " + tempName);
-            sendMessage(mCurrentMessage);
+            String tempName = mCurrentUser + i;
+            DeviceMessage testMessageObj = new DeviceMessage(tempName, "test " + i + " from " + tempName);
+            sendMessage(testMessageObj);
+//            sendMessage(mCurrentMessage);
         }
     }
 
@@ -567,11 +569,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //        mNearbyDevicesArrayAdapter.add( newmsg.toString());
 //
 //    }
-
-    private void receiveFakeMessage() {
-
-        mMessageListener.onFound(new Message("myname: jared".getBytes()));
-    }
 
 //    // read from storage to get a current message being published and the list of all received msgs
 //    // so they can be displayed
