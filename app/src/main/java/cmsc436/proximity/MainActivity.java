@@ -1,5 +1,6 @@
 package cmsc436.proximity;
 
+import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
@@ -67,7 +68,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         GoogleApiClient.OnConnectionFailedListener {
 
     private static final String TAG = "Proximity";
-
+    private static final int GUESSING_REQUEST = 1;
     private static final int TTL_IN_SECONDS = 15; // 15 seconds
 
     /**
@@ -109,6 +110,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private DeviceMessage mCurrentMessage;
     private Message mCurrentPublishingMessage;
     private int mHighScore;
+    private int mCurrentScore;
 
     private ArrayList<String> otherPlayers;
 
@@ -128,6 +130,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         otherPlayers = new ArrayList<String>();
         mHighScore = 0;
+        mCurrentScore = 0;
         isGameRunner = false;
 //        createMessageDialog();
 
@@ -206,7 +209,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mNearbyDevicesArrayAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1,
                 nearbyDevicesArrayList);
-        ListView nearbyDevicesListView = (ListView) findViewById(
+        final ListView nearbyDevicesListView = (ListView) findViewById(
                 R.id.nearby_devices_list_view);
 
         // Using ListActivity's setEmptyView method automatically
@@ -220,28 +223,61 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         // When a message in the ListView is selected, the user is sent to
         // a page that displays the message and a list of possible users who
         // could've sent that message.
-        // TODO: When a user rapidly clicks on the message, multiple activites are
-        // created
+        // TODO: identify the original sender of the message and send that information
+        // into the activity
         nearbyDevicesListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
                 Intent intent = new Intent(MainActivity.this, ChooseMessageActivity.class);
                 Bundle mBundle = new Bundle();
                 // Retrieve otherPlayers list to send into the new activity
                 mBundle.putStringArrayList("otherPlayers", otherPlayers);
+                // Log.i(TAG, "Current user is " + mCurrentUser);
                 // Player who sent the message
-                // mBundle.putString("gameRunner", gameRunner);
+                mBundle.putString("originalSender ", "name_here");
                 // Message that was selected
-                // mBundle.putString("message", message);
+                String msg = (String) nearbyDevicesListView.getItemAtPosition(position);
+                mBundle.putString("message", msg);
                 intent.putExtras(mBundle);
                 // Should be startActivity for result which indicates
                 // a score based on correct guess
-                startActivity(intent);
+                startActivityForResult(intent, GUESSING_REQUEST);
             }
         });
         buildGoogleApiClient();
 
 //        readFromStorage();
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // Activity returned successfully
+        if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == GUESSING_REQUEST) {
+                int point = data.getIntExtra("point", 0);
+                // If user has guessed correctly, add a point to their current
+                // streak.
+                if (point == 1) {
+                    Log.i(TAG, "User guessed correctly and received " + point + " point");
+                    mCurrentScore += point;
+                // Else, the user has guessed incorrectly and their streak is reset
+                // back to 0.
+                } else {
+                    Log.i(TAG, "User guessed incorrectly and score is reset");
+                    mCurrentScore = 0;
+                }
+
+                // If current streak is greater than the high score, then update
+                // with the new high score.
+                if (mCurrentScore > mHighScore) {
+                    mHighScore = mCurrentScore;
+                }
+            }
+        // Toast/ Message saying activity was cancelled.
+        // User did not guess a user
+        } else {
+            Log.i(TAG, "Activity was cancelled");
+        }
     }
 
     /* Creates action bar menu */
