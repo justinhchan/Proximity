@@ -11,7 +11,7 @@ public class DeviceMessage {
     /**
      * Builds a new {@link Message} object along with the sender's name.
      */
-    private DeviceMessage(String sender, String message) {
+    public DeviceMessage(String sender, String message) {
         this.mSender = sender;
         this.mMessage = new Message(message.getBytes());
     }
@@ -22,5 +22,9 @@ public class DeviceMessage {
 
     protected String getSender() {
         return mSender;
+    }
+
+    protected String getMessageString() {
+        return new String(mMessage.getContent());
     }
 }
