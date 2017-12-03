@@ -2,6 +2,8 @@ package cmsc436.proximity;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -13,18 +15,22 @@ import java.util.ArrayList;
  */
 
 public class ChooseMessageActivity extends Activity {
-    ArrayList<String> players;
+    ArrayList<String> otherPlayers;
     private ArrayAdapter<String> mPlayersListAdapter;
+    private String message;
+    private String gameRunner;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.choose_message);
         Bundle extras = getIntent().getExtras();
-        players = extras.getStringArrayList("players");
+        otherPlayers = extras.getStringArrayList("otherPlayers");
+        message = extras.getString("message");
+        gameRunner = extras.getString("gameRunner");
         mPlayersListAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1,
-                players);
+                otherPlayers);
 
         ListView playersListView = (ListView) findViewById(
                 R.id.playersListView);
@@ -32,5 +38,19 @@ public class ChooseMessageActivity extends Activity {
         TextView emptyText = (TextView) findViewById(R.id.emptyT);
         playersListView.setEmptyView(emptyText);
         playersListView.setAdapter(mPlayersListAdapter);
+
+        // User gets one guess to choose to co
+        playersListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                /*
+                 if (correct player was guessed) {
+                    return activity with score of 1
+                 } else {
+                    return activity with a score of 0
+                 }
+                 */
+            }
+        });
     }
 }

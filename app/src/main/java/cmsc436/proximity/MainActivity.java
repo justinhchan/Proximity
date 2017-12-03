@@ -232,14 +232,22 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         // When a message in the ListView is selected, the user is sent to
         // a page that displays the message and a list of possible users who
         // could've sent that message.
+        // TODO: When a user rapidly clicks on the message, multiple activites are
+        // created
         nearbyDevicesListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 Intent intent = new Intent(MainActivity.this, ChooseMessageActivity.class);
                 Bundle mBundle = new Bundle();
                 // Retrieve otherPlayers list to send into the new activity
-                mBundle.putStringArrayList("players", otherPlayers);
+                mBundle.putStringArrayList("otherPlayers", otherPlayers);
+                // Player who sent the message
+                // mBundle.putString("gameRunner", gameRunner);
+                // Message that was selected
+                // mBundle.putString("message", message);
                 intent.putExtras(mBundle);
+                // Should be startActivity for result which indicates
+                // a score based on correct guess
                 startActivity(intent);
             }
         });
