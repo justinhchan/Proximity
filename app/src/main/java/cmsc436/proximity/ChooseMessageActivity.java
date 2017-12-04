@@ -65,6 +65,8 @@ public class ChooseMessageActivity extends Activity {
                     returnIntent.putExtra("point", 0);
                 }
 
+                returnIntent.putExtra("message", message);
+
                 setResult(Activity.RESULT_OK, returnIntent);
                 finish();
             }

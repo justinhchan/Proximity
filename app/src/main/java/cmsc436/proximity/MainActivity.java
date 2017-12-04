@@ -40,12 +40,9 @@ import com.google.android.gms.nearby.messages.Strategy;
 import com.google.android.gms.nearby.messages.SubscribeCallback;
 import com.google.android.gms.nearby.messages.SubscribeOptions;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * An activity that allows a user to publish device information, and receive information about
@@ -91,8 +88,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     // Views.
     private Toolbar mToolbar;
-    private SwitchCompat mPublishSwitch;
-    private SwitchCompat mSubscribeSwitch;
     private AlertDialog mMessageDialog;
 
     /**
@@ -113,7 +108,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private int mCurrentScore;
 
     private ArrayList<String> otherPlayers;
-    private Map<String, String> playersAndMessages;
+    private Map<String, String> messagesAndPlayers;
 
     private AlertDialog mProfileDialog;
     private TextView highScoreTextView;
@@ -127,11 +122,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mToolbar = (Toolbar)findViewById(R.id.action_bar);
         setSupportActionBar(mToolbar);
 
-        mSubscribeSwitch = (SwitchCompat) findViewById(R.id.subscribe_switch);
-        mPublishSwitch = (SwitchCompat) findViewById(R.id.publish_switch);
-
         otherPlayers = new ArrayList<String>();
-        playersAndMessages = new HashMap<String, String>();
+        messagesAndPlayers = new HashMap<String, String>();
         mHighScore = 0;
         mCurrentScore = 0;
         isGameRunner = false;
@@ -144,28 +136,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 String messageContent = new String(message.getContent());
                 // Called when a new message is found.
                 Log.i(TAG, "received message " + messageContent);
-                // TODO parsing
-                if (messageContent.startsWith("myname: ")) {
-                    Pattern pattern = Pattern.compile("myname: () mymessage: ()");
-                    Matcher matcher = pattern.matcher(messageContent);
-                    if (matcher.find()) {
-                        String otherPlayerName = matcher.group(1);
-                        String otherPlayerMessage = matcher.group(2);
-                        Log.i(TAG, "regex name: " + otherPlayerName + " message: " + otherPlayerMessage);
-                    }
-                    else {
-                        Log.i(TAG, "regex no match found");
-                    }
+                String[] messageParts = messageContent.split(Integer.toString(TAG.hashCode()));
 
-                    String[] messageParts = messageContent.split(" ");
-                    String otherPlayerName = messageParts[1];
-                    String otherPlayerMessage = messageParts[3];
-                    Toast.makeText(getApplicationContext(), otherPlayerName + " sent " + otherPlayerMessage, Toast.LENGTH_SHORT).show();
-                    playersAndMessages.put(otherPlayerMessage, otherPlayerName);
-                    otherPlayers.add(otherPlayerName);
+                String otherPlayerName = messageParts[0];
+                String otherPlayerMessage = messageParts[1];
 
-                    mNearbyDevicesArrayAdapter.add(otherPlayerMessage);
-                }
+                messagesAndPlayers.put(otherPlayerMessage, otherPlayerName);
+                otherPlayers.add(otherPlayerName);
+                Log.i(TAG, "message: " + otherPlayerMessage + " name: " + otherPlayerName);
+                mNearbyDevicesArrayAdapter.add(otherPlayerMessage);
+
             }
 
             @Override
@@ -176,38 +156,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         };
 
-        mSubscribeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // If GoogleApiClient is connected, perform sub actions in response to user action.
-                // If it isn't connected, do nothing, and perform sub actions when it connects (see
-                // onConnected()).
-                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
-                    if (isChecked) {
-                        subscribe();
-                    } else {
-                        unsubscribe();
-                    }
-                }
-            }
-        });
-
-        mPublishSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // If GoogleApiClient is connected, perform pub actions in response to user action.
-                // If it isn't connected, do nothing, and perform pub actions when it connects (see
-                // onConnected()).
-                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
-                    if (isChecked) {
-                        publish();
-                    } else {
-                        unpublish();
-                    }
-                }
-            }
-        });
-
         Button startGameBtn = findViewById(R.id.startgamebtn);
         startGameBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -215,6 +163,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 if (mCurrentUser.equals("") || mCurrentMessage == null) {
                     Toast.makeText(getApplicationContext(), "BOTH your name and message need to be set before starting.", Toast.LENGTH_LONG).show();
                 } else {
+                    Toast.makeText(getApplicationContext(), "Game has started", Toast.LENGTH_SHORT).show();
                     startGame();
                 }
             }
@@ -264,7 +213,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 mBundle.putString("message", msg);
                 // Log.i(TAG, "Current user is " + mCurrentUser);
                 // Player who sent the message
-                String sender = playersAndMessages.get(msg);
+                String sender = messagesAndPlayers.get(msg);
                 mBundle.putString("originalSender", sender);
                 Log.i(TAG, "start choosemessage activity message: " + msg + " sender: " + sender);
                 intent.putExtras(mBundle);
@@ -287,10 +236,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 if (point == 1) {
                     Log.i(TAG, "User guessed correctly and received " + point + " point");
                     mCurrentScore += point;
+                    Toast.makeText(getApplicationContext(), "Correct!", Toast.LENGTH_SHORT).show();
                 // Else, the user has guessed incorrectly and their streak is reset
                 // back to 0.
                 } else {
                     Log.i(TAG, "User guessed incorrectly and score is reset");
+
+                    Toast.makeText(getApplicationContext(), "Incorrect!", Toast.LENGTH_SHORT).show();
                     mCurrentScore = 0;
                 }
 
@@ -300,7 +252,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     mHighScore = mCurrentScore;
                 }
 
-                highScoreTextView.setText(mHighScore);
+                if (highScoreTextView == null) {
+                    Log.i(TAG, "updating high score, textview is null");
+                }
+                highScoreTextView.setText("Current high score: " + Integer.toString(mHighScore));
+
+                String messageGuessed = data.getStringExtra("message");
+                mNearbyDevicesArrayAdapter.remove(messageGuessed);
             }
         // Toast/ Message saying activity was cancelled.
         // User did not guess a user
@@ -358,7 +316,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     }).build();
 
 
-            mCurrentPublishingMessage = new Message(("myname: " + mCurrentUser + " mymessage: " + mCurrentMessage.getMessageString()).getBytes());
+            mCurrentPublishingMessage = new Message((mCurrentUser + TAG.hashCode() + mCurrentMessage.getMessageString()).getBytes());
             Log.i(TAG, "sending msg " + new String(mCurrentPublishingMessage.getContent()));
             Nearby.Messages.publish(mGoogleApiClient, mCurrentPublishingMessage, options)
                     .setResultCallback(new ResultCallback<Status>() {
@@ -692,12 +650,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     public void onExpired() {
                         super.onExpired();
                         Log.i(TAG, "No longer subscribing");
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                mSubscribeSwitch.setChecked(false);
-                            }
-                        });
                     }
                 }).build();
 
@@ -712,7 +664,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                             Log.i(TAG, status.getStatus().toString());
                             Log.i(TAG, status.getStatusMessage());
                             Log.i(TAG, status.getStatusCode() + "");
-                            mSubscribeSwitch.setChecked(false);
                         }
                     }
                 });
@@ -734,7 +685,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                mPublishSwitch.setChecked(false);
                             }
                         });
                     }
@@ -751,7 +701,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                             Log.i(TAG, status.getStatus().toString());
                             Log.i(TAG, status.getStatusMessage());
                             Log.i(TAG, status.getStatusCode() + "");
-                            mPublishSwitch.setChecked(false);
                         }
                     }
                 });
