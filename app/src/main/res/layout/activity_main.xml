@@ -26,13 +26,22 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Start Game"
-            android:textAppearance="@android:style/TextAppearance.Material.Widget.Button" />
+            android:textColor="#000"
+            android:textSize="18sp"
+            android:backgroundTint="#5ecc62"
+            android:textAppearance="@android:style/TextAppearance.Material.Widget.Button"
+             />
+
+
 
         <Button
             android:id="@+id/clearbtn"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:textColor="#000"
+            android:textSize="18sp"
+            android:backgroundTint="#5ecc62"
             android:text="Clear List" />
     </LinearLayout>
 
