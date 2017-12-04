@@ -3,6 +3,7 @@ package cmsc436.proximity;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -21,14 +22,18 @@ public class ChooseMessageActivity extends Activity {
     private String message;
     private String sender;
 
+    String TAG = "Proximity";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.choose_message);
         Bundle extras = getIntent().getExtras();
         otherPlayers = extras.getStringArrayList("otherPlayers");
+        Log.i(TAG, "all extras: " + extras);
         message = extras.getString("message");
         sender = extras.getString("originalSender");
+        Log.i(TAG, "choosemessageactivity message: " + message + " sender: " + sender);
         mPlayersListAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1,
                 otherPlayers);

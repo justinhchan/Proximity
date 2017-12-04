@@ -9,6 +9,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.SwitchCompat;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -19,6 +20,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -38,10 +40,12 @@ import com.google.android.gms.nearby.messages.Strategy;
 import com.google.android.gms.nearby.messages.SubscribeCallback;
 import com.google.android.gms.nearby.messages.SubscribeOptions;
 
-import org.w3c.dom.Text;
-
+import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * An activity that allows a user to publish device information, and receive information about
@@ -69,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     private static final String TAG = "Proximity";
     private static final int GUESSING_REQUEST = 1;
-    private static final int TTL_IN_SECONDS = 15; // 15 seconds
+    private static final int TTL_IN_SECONDS = 60;
 
     /**
      * Sets the time in seconds for a published message or a subscription to live. Set to two
@@ -87,8 +91,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     // Views.
     private Toolbar mToolbar;
-//    private SwitchCompat mPublishSwitch;
-//    private SwitchCompat mSubscribeSwitch;
+    private SwitchCompat mPublishSwitch;
+    private SwitchCompat mSubscribeSwitch;
     private AlertDialog mMessageDialog;
 
     /**
@@ -101,10 +105,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
      */
     private ArrayAdapter<String> mNearbyDevicesArrayAdapter;
 
-    // internal storage
-//    private String currMessageStorageFileName = "currMessageFile";
-//    private String receivedMessagesStorageFileName = "allMessagesFile";
-
     /* Variables for current objects */
     private String mCurrentUser = "";
     private DeviceMessage mCurrentMessage;
@@ -113,8 +113,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private int mCurrentScore;
 
     private ArrayList<String> otherPlayers;
+    private Map<String, String> playersAndMessages;
 
     private AlertDialog mProfileDialog;
+    private TextView highScoreTextView;
     private Boolean isGameRunner;
 
     @Override
@@ -125,13 +127,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mToolbar = (Toolbar)findViewById(R.id.action_bar);
         setSupportActionBar(mToolbar);
 
-//        mSubscribeSwitch = (SwitchCompat) findViewById(R.id.subscribe_switch);
-//        mPublishSwitch = (SwitchCompat) findViewById(R.id.publish_switch);
+        mSubscribeSwitch = (SwitchCompat) findViewById(R.id.subscribe_switch);
+        mPublishSwitch = (SwitchCompat) findViewById(R.id.publish_switch);
 
         otherPlayers = new ArrayList<String>();
+        playersAndMessages = new HashMap<String, String>();
         mHighScore = 0;
         mCurrentScore = 0;
         isGameRunner = false;
+
 //        createMessageDialog();
 
         mMessageListener = new MessageListener() {
@@ -140,49 +144,69 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 String messageContent = new String(message.getContent());
                 // Called when a new message is found.
                 Log.i(TAG, "received message " + messageContent);
+                // TODO parsing
+                if (messageContent.startsWith("myname: ")) {
+                    Pattern pattern = Pattern.compile("myname: () mymessage: ()");
+                    Matcher matcher = pattern.matcher(messageContent);
+                    if (matcher.find()) {
+                        String otherPlayerName = matcher.group(1);
+                        String otherPlayerMessage = matcher.group(2);
+                        Log.i(TAG, "regex name: " + otherPlayerName + " message: " + otherPlayerMessage);
+                    }
+                    else {
+                        Log.i(TAG, "regex no match found");
+                    }
 
-                mNearbyDevicesArrayAdapter.add(messageContent);
+                    String[] messageParts = messageContent.split(" ");
+                    String otherPlayerName = messageParts[1];
+                    String otherPlayerMessage = messageParts[3];
+                    Toast.makeText(getApplicationContext(), otherPlayerName + " sent " + otherPlayerMessage, Toast.LENGTH_SHORT).show();
+                    playersAndMessages.put(otherPlayerMessage, otherPlayerName);
+                    otherPlayers.add(otherPlayerName);
+
+                    mNearbyDevicesArrayAdapter.add(otherPlayerMessage);
+                }
             }
 
             @Override
             public void onLost(final Message message) {
                 // Called when a message is no longer detectable nearby.
-                mNearbyDevicesArrayAdapter.remove("user");
+//                mNearbyDevicesArrayAdapter.remove("user");
                 Toast.makeText(getApplicationContext(), "Message expired", Toast.LENGTH_SHORT).show();
             }
         };
 
-//        mSubscribeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-//            @Override
-//            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-//                // If GoogleApiClient is connected, perform sub actions in response to user action.
-//                // If it isn't connected, do nothing, and perform sub actions when it connects (see
-//                // onConnected()).
-//                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
-//                    if (isChecked) {
-//                        subscribe();
-//                    } else {
-//                        unsubscribe();
-//                    }
-//                }
-//            }
-//        });
+        mSubscribeSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                // If GoogleApiClient is connected, perform sub actions in response to user action.
+                // If it isn't connected, do nothing, and perform sub actions when it connects (see
+                // onConnected()).
+                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
+                    if (isChecked) {
+                        subscribe();
+                    } else {
+                        unsubscribe();
+                    }
+                }
+            }
+        });
 
-//        mPublishSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-//            @Override
-//            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-//                // If GoogleApiClient is connected, perform pub actions in response to user action.
-//                // If it isn't connected, do nothing, and perform pub actions when it connects (see
-//                // onConnected()).
-//                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
-//                    if (isChecked) {
-//                        publish();
-//                    } else {
-//                        unpublish();
-//                    }
-//                }
-//            }
-//        });
+        mPublishSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                // If GoogleApiClient is connected, perform pub actions in response to user action.
+                // If it isn't connected, do nothing, and perform pub actions when it connects (see
+                // onConnected()).
+                if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
+                    if (isChecked) {
+                        publish();
+                    } else {
+                        unpublish();
+                    }
+                }
+            }
+        });
 
         Button startGameBtn = findViewById(R.id.startgamebtn);
         startGameBtn.setOnClickListener(new View.OnClickListener() {
@@ -220,6 +244,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         nearbyDevicesListView.setEmptyView(emptyText);
         nearbyDevicesListView.setAdapter(mNearbyDevicesArrayAdapter);
 
+        highScoreTextView = (TextView) findViewById(R.id.highscore);
+        highScoreTextView.setText("Current high score: " + Integer.toString(mHighScore));
+
         // When a message in the ListView is selected, the user is sent to
         // a page that displays the message and a list of possible users who
         // could've sent that message.
@@ -232,12 +259,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 Bundle mBundle = new Bundle();
                 // Retrieve otherPlayers list to send into the new activity
                 mBundle.putStringArrayList("otherPlayers", otherPlayers);
-                // Log.i(TAG, "Current user is " + mCurrentUser);
-                // Player who sent the message
-                mBundle.putString("originalSender ", "name_here");
                 // Message that was selected
                 String msg = (String) nearbyDevicesListView.getItemAtPosition(position);
                 mBundle.putString("message", msg);
+                // Log.i(TAG, "Current user is " + mCurrentUser);
+                // Player who sent the message
+                String sender = playersAndMessages.get(msg);
+                mBundle.putString("originalSender", sender);
+                Log.i(TAG, "start choosemessage activity message: " + msg + " sender: " + sender);
                 intent.putExtras(mBundle);
                 // Should be startActivity for result which indicates
                 // a score based on correct guess
@@ -245,8 +274,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         });
         buildGoogleApiClient();
-
-//        readFromStorage();
     }
 
     @Override
@@ -272,6 +299,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 if (mCurrentScore > mHighScore) {
                     mHighScore = mCurrentScore;
                 }
+
+                highScoreTextView.setText(mHighScore);
             }
         // Toast/ Message saying activity was cancelled.
         // User did not guess a user
@@ -294,13 +323,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     // start subscribing for other players' names from nearby devices
     // after 30 seconds stop subscribing and publishing
     private void startGame() {
-
-        for (int i = 0; i < 5; i++) {
-            String tempName = mCurrentUser + i;
-            DeviceMessage testMessageObj = new DeviceMessage(tempName, "test " + i + " from " + tempName);
-            sendMessage(testMessageObj);
-//            sendMessage(mCurrentMessage);
-        }
+        publishNameAndMessage();
+        startFindingOtherPlayers();
+//        for (int i = 0; i < 5; i++) {
+//            String tempName = mCurrentUser + i;
+//            DeviceMessage testMessageObj = new DeviceMessage(tempName, "test " + i + " from " + tempName);
+//            sendMessage(testMessageObj);
+////            sendMessage(mCurrentMessage);
+//        }
     }
 
     private void sendMessage(DeviceMessage msgObj) {
@@ -308,34 +338,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mMessageListener.onFound(msgObj.getMessageBody());
     }
 
-//    private void openNamePrompt() {
-//        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-//
-//        // Get the layout inflater
-//        LayoutInflater inflater = this.getLayoutInflater();
-//
-//        // Inflate and set the layout for the dialog
-//        // Pass null as the parent view because its going in the dialog layout
-//        final View dialog_view = inflater.inflate(R.layout.nameprompt, null);
-//        builder.setView(dialog_view);
-//        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-//            @Override
-//            public void onClick(DialogInterface dialog, int id) {
-//                EditText nameEntry   = (EditText) dialog_view.findViewById(R.id.dialog_name);
-//                mCurrentUser = nameEntry.getText().toString();
-//                nameEntry.setText("");
-//
-//                startPublishingName();
-//                startFindingOtherPlayers();
-//            }
-//        });
-//
-//        profileDialog = builder.create();
-//        profileDialog.show();
-//    }
-
     // publish this player's name to nearby devices for 30 secs
-    private void startPublishingName() {
+    private void publishNameAndMessage() {
             Log.i(TAG, "Publishing");
             PublishOptions options = new PublishOptions.Builder()
                     .setStrategy(PUB_SUB_STRATEGY)
@@ -353,8 +357,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         }
                     }).build();
 
-            // publish a message "myname: <name>". other devices will extract the name from the message and add to their list
-            mCurrentPublishingMessage = new Message(("myname: " + mCurrentUser).getBytes());
+
+            mCurrentPublishingMessage = new Message(("myname: " + mCurrentUser + " mymessage: " + mCurrentMessage.getMessageString()).getBytes());
+            Log.i(TAG, "sending msg " + new String(mCurrentPublishingMessage.getContent()));
             Nearby.Messages.publish(mGoogleApiClient, mCurrentPublishingMessage, options)
                     .setResultCallback(new ResultCallback<Status>() {
                         @Override
@@ -383,7 +388,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                             @Override
                             public void run() {
                                 Toast.makeText(getApplicationContext(), "subscribed for 15 secs", Toast.LENGTH_SHORT).show();
-                                pickGameRunner();
+//                                pickGameRunner();
                             }
                         });
                     }
@@ -396,6 +401,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         if (status.isSuccess()) {
                             Log.i(TAG, "Subscribed successfully.");
                         } else {
+
+                            Log.i(TAG, status.getStatus().toString());
+                            Log.i(TAG, status.getStatusMessage());
+                            Log.i(TAG, status.getStatusCode() + "");
                             Toast.makeText(getApplicationContext(), "failed to subscribe", Toast.LENGTH_SHORT).show();
                         }
                     }
@@ -591,8 +600,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         mMessageDialog = builder.create();
         mMessageDialog.show();
-
-//        currPubMessageDisplay = dialog_view.findViewById(R.id.dialog_current_message);
     }
 
 
@@ -609,118 +616,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
         return true;
     }
-
-
-
-//    private void receiveMessage(String newmsg) {
-//        mNearbyDevicesArrayAdapter.add( newmsg.toString());
-//
-//    }
-
-//    // read from storage to get a current message being published and the list of all received msgs
-//    // so they can be displayed
-//    private void readFromStorage() {
-//        // check if curr msg file already exists & if not create it
-//        if (!getFileStreamPath(currMessageStorageFileName).exists()) {
-//            try {
-//                getFileStreamPath(currMessageStorageFileName).createNewFile();
-//            } catch (IOException e) {
-//                Log.i(TAG, "IO exception creating curr msg file");
-//                e.printStackTrace();
-//            }
-//        }
-//        // read curr msg file
-//        try {
-//            FileInputStream fis = openFileInput(currMessageStorageFileName);
-//            BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-//
-//            String line;
-//            String sep = System.getProperty("line.separator");
-//
-//            while (null != (line = br.readLine())) {
-//                currentPubMessageString = line;
-//            }
-//
-//            br.close();
-//
-//        } catch (IOException e) {
-//            Log.i(TAG, "IOException");
-//        }
-//
-//        // check if received msgs file already exists & if not create it
-//        if (!getFileStreamPath(receivedMessagesStorageFileName).exists()) {
-//            // read received msgs file
-//            try {
-//                FileInputStream fis = openFileInput(receivedMessagesStorageFileName);
-//                BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-//
-//                String line;
-//                String sep = System.getProperty("line.separator");
-//
-//                while (null != (line = br.readLine())) {
-//                    mNearbyDevicesArrayAdapter.add(line);
-//                }
-//
-//                br.close();
-//
-//            } catch (IOException e) {
-//                Log.i(TAG, "IOException");
-//            }
-//        }
-//    }
-//
-//    // store all received messages in internal storage
-//    private void storeReceivedMessages() {
-//
-//        // check if received msgs file already exists & if not create it
-//        if (!getFileStreamPath(receivedMessagesStorageFileName).exists()) {
-//            try {
-//                getFileStreamPath(receivedMessagesStorageFileName).createNewFile();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//
-//        }
-//        try {
-//            FileOutputStream fos = openFileOutput(receivedMessagesStorageFileName, MODE_APPEND);
-//
-//            PrintWriter pw = new PrintWriter(new BufferedWriter(
-//                    new OutputStreamWriter(fos)));
-//
-//            for (int i=0; i<mNearbyDevicesArrayAdapter.getCount(); i++) {
-//                pw.println(mNearbyDevicesArrayAdapter.getItem(i));
-//            }
-//
-//            pw.close();
-//        } catch (FileNotFoundException e) {
-//            Log.i(TAG, "received messages file not found");
-//        }
-//    }
-//
-//    // when the currently broadcasting message is changed, save it to internal storage
-//    private void saveCurrentPubMessage() {
-//        // check if curr msg file already exists & if not create it, write new str to file
-//        if (!getFileStreamPath(currMessageStorageFileName).exists()) {
-//            try {
-//                getFileStreamPath(currMessageStorageFileName).createNewFile();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//        try {
-//            FileOutputStream fos = openFileOutput(currMessageStorageFileName, MODE_PRIVATE);
-//
-//            PrintWriter pw = new PrintWriter(new BufferedWriter(
-//                    new OutputStreamWriter(fos)));
-//
-//            pw.println(currentPubMessageString);
-//
-//            pw.close();
-//        } catch (IOException e) {
-//            Log.i(TAG, "IO exception writing to curr msg file");
-//            e.printStackTrace();
-//        }
-//    }
 
     /**
      * Builds {@link GoogleApiClient}, enabling automatic lifecycle management using
@@ -782,87 +677,85 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 //        if (mSubscribeSwitch.isChecked())
 //            unsubscribe();
     }
-//
-//    /**
-//     * Subscribes to messages from nearby devices and updates the UI if the subscription either
-//     * fails or TTLs.
-//     */
-//    private void subscribe() {
-//        Log.i(TAG, "Subscribing");
-//        mNearbyDevicesArrayAdapter.clear();
-//        SubscribeOptions options = new SubscribeOptions.Builder()
-//                .setStrategy(PUB_SUB_STRATEGY)
-//                .setCallback(new SubscribeCallback() {
-//                    @Override
-//                    public void onExpired() {
-//                        super.onExpired();
-//                        Log.i(TAG, "No longer subscribing");
-//                        runOnUiThread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                mSubscribeSwitch.setChecked(false);
-//                            }
-//                        });
-//                    }
-//                }).build();
-//
-//        Nearby.Messages.subscribe(mGoogleApiClient, mMessageListener, options)
-//                .setResultCallback(new ResultCallback<Status>() {
-//                    @Override
-//                    public void onResult(@NonNull Status status) {
-//                        if (status.isSuccess()) {
-//                            Log.i(TAG, "Subscribed successfully.");
-//                        } else {
-//                            mSubscribeSwitch.setChecked(false);
-//                        }
-//                    }
-//                });
-//    }
-//
-//    /**
-//     * Publishes a message to nearby devices and updates the UI if the publication either fails or
-//     * TTLs.
-//     */
-//    private void publish() {
-//        Log.i(TAG, "Publishing");
-//        PublishOptions options = new PublishOptions.Builder()
-//                .setStrategy(PUB_SUB_STRATEGY)
-//                .setCallback(new PublishCallback() {
-//                    @Override
-//                    public void onExpired() {
-//                        super.onExpired();
-//                        Log.i(TAG, "No longer publishing");
-//                        runOnUiThread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                mPublishSwitch.setChecked(false);
-//                            }
-//                        });
-//                    }
-//                }).build();
-//
-//        if (currentPubMessage == null) {
-//            Log.i(TAG, "message was null");
-//            //currentPubMessageString = "No message is being published yet";
-//            currentPubMessage = new Message(currentPubMessageString.getBytes());
-//        }
-//        else {
-//        }
-//        Nearby.Messages.publish(mGoogleApiClient, currentPubMessage, options)
-//                .setResultCallback(new ResultCallback<Status>() {
-//                    @Override
-//                    public void onResult(@NonNull Status status) {
-//                        if (status.isSuccess()) {
-//                            Log.i(TAG, "Published successfully.");
-//                        } else {
-//                            Log.i(TAG, status.getStatus().toString());
-//                            Log.i(TAG, status.getStatusMessage());
-//                            Log.i(TAG, status.getStatusCode() + "");
-//                            mPublishSwitch.setChecked(false);
-//                        }
-//                    }
-//                });
-//    }
+
+    /**
+     * Subscribes to messages from nearby devices and updates the UI if the subscription either
+     * fails or TTLs.
+     */
+    private void subscribe() {
+        Log.i(TAG, "Subscribing");
+        mNearbyDevicesArrayAdapter.clear();
+        SubscribeOptions options = new SubscribeOptions.Builder()
+                .setStrategy(PUB_SUB_STRATEGY)
+                .setCallback(new SubscribeCallback() {
+                    @Override
+                    public void onExpired() {
+                        super.onExpired();
+                        Log.i(TAG, "No longer subscribing");
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                mSubscribeSwitch.setChecked(false);
+                            }
+                        });
+                    }
+                }).build();
+
+        Nearby.Messages.subscribe(mGoogleApiClient, mMessageListener, options)
+                .setResultCallback(new ResultCallback<Status>() {
+                    @Override
+                    public void onResult(@NonNull Status status) {
+                        if (status.isSuccess()) {
+                            Log.i(TAG, "Subscribed successfully.");
+                        } else {
+
+                            Log.i(TAG, status.getStatus().toString());
+                            Log.i(TAG, status.getStatusMessage());
+                            Log.i(TAG, status.getStatusCode() + "");
+                            mSubscribeSwitch.setChecked(false);
+                        }
+                    }
+                });
+    }
+
+    /**
+     * Publishes a message to nearby devices and updates the UI if the publication either fails or
+     * TTLs.
+     */
+    private void publish() {
+        Log.i(TAG, "Publishing");
+        PublishOptions options = new PublishOptions.Builder()
+                .setStrategy(PUB_SUB_STRATEGY)
+                .setCallback(new PublishCallback() {
+                    @Override
+                    public void onExpired() {
+                        super.onExpired();
+                        Log.i(TAG, "No longer publishing");
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                mPublishSwitch.setChecked(false);
+                            }
+                        });
+                    }
+                }).build();
+
+
+        Nearby.Messages.publish(mGoogleApiClient, mCurrentPublishingMessage, options)
+                .setResultCallback(new ResultCallback<Status>() {
+                    @Override
+                    public void onResult(@NonNull Status status) {
+                        if (status.isSuccess()) {
+                            Log.i(TAG, "Published successfully.");
+                        } else {
+                            Log.i(TAG, status.getStatus().toString());
+                            Log.i(TAG, status.getStatusMessage());
+                            Log.i(TAG, status.getStatusCode() + "");
+                            mPublishSwitch.setChecked(false);
+                        }
+                    }
+                });
+    }
 
     /**
      * Stops subscribing to messages from nearby devices.
