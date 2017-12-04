@@ -59,6 +59,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:gravity="center"
+        android:paddingTop="10dp"
         android:text="No messages have been received"/>
 
 </LinearLayout>
