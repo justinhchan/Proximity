@@ -199,8 +199,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         // When a message in the ListView is selected, the user is sent to
         // a page that displays the message and a list of possible users who
         // could've sent that message.
-        // TODO: identify the original sender of the message and send that information
-        // into the activity
         nearbyDevicesListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
@@ -283,12 +281,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private void startGame() {
         publishNameAndMessage();
         startFindingOtherPlayers();
-//        for (int i = 0; i < 5; i++) {
-//            String tempName = mCurrentUser + i;
-//            DeviceMessage testMessageObj = new DeviceMessage(tempName, "test " + i + " from " + tempName);
-//            sendMessage(testMessageObj);
-////            sendMessage(mCurrentMessage);
-//        }
     }
 
     private void sendMessage(DeviceMessage msgObj) {
@@ -329,7 +321,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                             }
                         }
                     });
-        }
+    }
 
     // subscribe for 30 secs to find other players
     private void startFindingOtherPlayers() {
@@ -367,100 +359,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         }
                     }
                 });
-    }
-
-    // pick a device to run the game by choosing the alphabeticallly first user
-    private void pickGameRunner() {
-        String alphaFirstUser = mCurrentUser;
-        for (String user : otherPlayers) {
-            if (alphaFirstUser.compareTo(user) > 0) {
-                alphaFirstUser = user;
-            }
-        }
-
-        if (alphaFirstUser.compareTo(mCurrentUser) == 0) {
-            //this device is the game runner
-            isGameRunner = true;
-        }
-
-        //check for potential game runner conflicts
-        advertiseGameRunner();
-
-        // then we start a round of the game (2b in the tasks doc)
-    }
-
-    private void advertiseGameRunner() {
-        if (isGameRunner) {
-            // publish "i am the game runner" to other devices
-            Log.i(TAG, "Publishing");
-            PublishOptions options = new PublishOptions.Builder()
-                    .setStrategy(PUB_SUB_STRATEGY)
-                    .setCallback(new PublishCallback() {
-                        @Override
-                        public void onExpired() {
-                            super.onExpired();
-                            Log.i(TAG, "No longer publishing");
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Toast.makeText(getApplicationContext(), "published game runner", Toast.LENGTH_SHORT).show();
-                                    startGameRound();
-                                }
-                            });
-                        }
-                    }).build();
-
-            // publish a message "myname: <name>". other devices will extract the name from the message and add to their list
-            mCurrentPublishingMessage = new Message(("gamerunner: " + mCurrentUser).getBytes());
-            Nearby.Messages.publish(mGoogleApiClient, mCurrentPublishingMessage, options)
-                    .setResultCallback(new ResultCallback<Status>() {
-                        @Override
-                        public void onResult(@NonNull Status status) {
-                            if (status.isSuccess()) {
-                                Log.i(TAG, "Published successfully.");
-                            } else {
-                                Toast.makeText(getApplicationContext(), "failed to publish", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    });
-        }
-
-        // subscribe to recieve game runner message from the game runner
-        Log.i(TAG, "Subscribing");
-        mNearbyDevicesArrayAdapter.clear();
-        SubscribeOptions options = new SubscribeOptions.Builder()
-                .setStrategy(PUB_SUB_STRATEGY)
-                .setCallback(new SubscribeCallback() {
-                    @Override
-                    public void onExpired() {
-                        super.onExpired();
-                        Log.i(TAG, "No longer subscribing");
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                Toast.makeText(getApplicationContext(), "subscribed for 15 secs", Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    }
-                }).build();
-
-        Nearby.Messages.subscribe(mGoogleApiClient, mMessageListener, options)
-                .setResultCallback(new ResultCallback<Status>() {
-                    @Override
-                    public void onResult(@NonNull Status status) {
-                        if (status.isSuccess()) {
-                            Log.i(TAG, "Subscribed successfully.");
-                        } else {
-                            Toast.makeText(getApplicationContext(), "failed to subscribe", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-                });
-    }
-
-    private void startGameRound() {
-        if (isGameRunner) {
-            // randomly select user to be the Message Sender
-        }
     }
 
     /**
@@ -626,14 +524,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     protected void onStop() {
         Log.i(TAG, "onStop()");
         super.onStop();
-//        storeReceivedMessages();
-//        saveCurrentPubMessage();
-
-//        if (mPublishSwitch.isChecked())
-//            unpublish();
-//
-//        if (mSubscribeSwitch.isChecked())
-//            unsubscribe();
     }
 
     /**
